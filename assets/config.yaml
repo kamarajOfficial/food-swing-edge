@@ -1,0 +1,11 @@
+# assets/config.yaml
+
+base_urls:
+#  development: https://edge-api-fsx.foodswing.in
+   local: http://fsx-prod-alb-edge-api-294983453.us-east-1.elb.amazonaws.com
+#   development: http://192.168.193.152:8009
+#   fsx: http://192.168.193.152:8001
+   fsx: http://fsx-prod-alb-api-69885881.us-east-1.elb.amazonaws.com
+   janani: http://janani-prod-alb-production-1247932572.us-east-1.elb.amazonaws.com
+   gcc: http://gcc-prod-alb-production-1247932572.us-east-1.elb.amazonaws.com
+#   local: http://192.168.193.152:8009
