@@ -31,21 +31,49 @@ class _PurchaseRequestGeneratePageState
   String category = "Non Perishable";
   final TextEditingController fromDateController = TextEditingController();
   final TextEditingController toDateController = TextEditingController();
+  List<Map<String,dynamic>> ingredientMaster = [];
 
   DateTime selectedDate = DateTime.now();
+
+  String formatApiDate(DateTime d) {
+    return "${d.year}-"
+        "${d.month.toString().padLeft(2, '0')}-"
+        "${d.day.toString().padLeft(2, '0')}";
+  }
 
   @override
   void initState() {
     super.initState();
 
-    fromDateController.text =
-        "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
-
-    toDateController.text =
-        "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+    fromDateController.text = formatApiDate(selectedDate);
+    toDateController.text = formatApiDate(selectedDate);
 
     loadMeals();
     loadKitchens();
+    loadIngredientMaster();
+  }
+
+  Future<void> loadIngredientMaster() async {
+
+    final response = await http.get(
+      Uri.parse(
+        "${AppConfig.apiBaseUrl}/api/ingredientAllGet/list",
+      ),
+    );
+
+    if(response.statusCode==200){
+
+      final json=jsonDecode(response.body);
+
+      setState((){
+
+        ingredientMaster=
+        List<Map<String,dynamic>>.from(json["data"]);
+
+      });
+
+    }
+
   }
 
   Future<void> loadKitchens() async {
@@ -117,6 +145,49 @@ class _PurchaseRequestGeneratePageState
     }
   }
 
+  Future<void> previewPurchaseRequest() async {
+    if (selectedMeals.isEmpty || selectedKitchens.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Select Kitchen and Meal")),
+      );
+      return;
+    }
+
+    final mealIds =
+    selectedMeals.map((e) => e["id"].toString()).join(",");
+
+    final kitchenIds =
+    selectedKitchens.map((e) => e["id"].toString()).join(",");
+
+    final response = await http.get(
+      Uri.parse(
+        "${AppConfig.apiBaseUrl}"
+            "/api/projection/preparation/"
+            "${fromDateController.text}/"
+            "${toDateController.text}/"
+            "$mealIds/"
+            "$kitchenIds",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PurchaseRequestPreviewPage(
+            ingredients: List<Map<String, dynamic>>.from(json["data"]),
+            fromDate: fromDateController.text,
+            toDate: toDateController.text,
+            mealIds: mealIds,
+            kitchenIds: kitchenIds,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _pickDate(bool isFromDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -129,12 +200,15 @@ class _PurchaseRequestGeneratePageState
       setState(() {
         selectedDate = picked;
 
-        final date = "${picked.day}-${picked.month}-${picked.year}";
-
+        String formatApiDate(DateTime d) {
+          return "${d.year}-"
+              "${d.month.toString().padLeft(2, '0')}-"
+              "${d.day.toString().padLeft(2, '0')}";
+        }
         if (isFromDate) {
-          fromDateController.text = date;
+          fromDateController.text = formatApiDate(picked);
         } else {
-          toDateController.text = date;
+          toDateController.text = formatApiDate(picked);
         }
       });
     }
@@ -330,53 +404,6 @@ class _PurchaseRequestGeneratePageState
                 ),
               ],
             ),
-
-            // const SizedBox(height: 18),
-            //
-            // /// CATEGORY
-            // DropdownButtonFormField<String>(
-            //   value: category,
-            //   isExpanded: true,
-            //   decoration: InputDecoration(
-            //     labelText: "Category",
-            //     prefixIcon: const Icon(Icons.category_outlined),
-            //     filled: true,
-            //     fillColor: Colors.white,
-            //     border: OutlineInputBorder(
-            //       borderRadius: BorderRadius.circular(18),
-            //     ),
-            //     enabledBorder: OutlineInputBorder(
-            //       borderRadius: BorderRadius.circular(18),
-            //       borderSide: BorderSide(color: Colors.grey.shade300),
-            //     ),
-            //   ),
-            //   items: const [
-            //     DropdownMenuItem(
-            //       value: "Non Perishable",
-            //       child: Text("Non Perishable"),
-            //     ),
-            //     DropdownMenuItem(
-            //       value: "Perishable",
-            //       child: Text("Perishable"),
-            //     ),
-            //   ],
-            //   onChanged: (v) {
-            //     setState(() => category = v!);
-            //   },
-            // ),
-
-            // const SizedBox(height: 20),
-            //
-            // Card(
-            //   child: ListTile(
-            //     leading: const Icon(Icons.analytics, color: Colors.orange),
-            //     title: const Text("Preview"),
-            //     subtitle: const Text(
-            //       "Items : 18\nEstimated Amount : ₹1,25,500",
-            //     ),
-            //   ),
-            // ),
-
             const SizedBox(height: 25),
 
             SizedBox(
@@ -386,7 +413,7 @@ class _PurchaseRequestGeneratePageState
                   backgroundColor: Color(0xFFF15F28),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
-                onPressed: generatePurchaseRequest,
+                onPressed: previewPurchaseRequest,
                 icon: const Icon(Icons.auto_mode),
                 label: const Text(
                   "Generate Purchase Request",
@@ -397,6 +424,341 @@ class _PurchaseRequestGeneratePageState
           ],
         ),
       ),
+    );
+  }
+}
+
+class PurchaseRequestPreviewPage extends StatefulWidget {
+  final List<Map<String, dynamic>> ingredients;
+  final String fromDate;
+  final String toDate;
+  final String mealIds;
+  final String kitchenIds;
+
+  const PurchaseRequestPreviewPage({
+    Key? key,
+    required this.ingredients,
+    required this.fromDate,
+    required this.toDate,
+    required this.mealIds,
+    required this.kitchenIds,
+  }) : super(key: key);
+
+  @override
+  State<PurchaseRequestPreviewPage> createState() =>
+      _PurchaseRequestPreviewPageState();
+}
+
+class _PurchaseRequestPreviewPageState
+    extends State<PurchaseRequestPreviewPage> {
+  List<Map<String, dynamic>> ingredients = [];
+  List<Map<String, dynamic>> ingredientMaster = [];
+
+  @override
+  void initState() {
+    super.initState();
+    ingredients = List<Map<String, dynamic>>.from(widget.ingredients);
+    loadIngredientMaster();
+  }
+
+  Future<void> loadIngredientMaster() async {
+    final response = await http.get(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/ingredientAllGet/list"),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      setState(() {
+        ingredientMaster =
+        List<Map<String, dynamic>>.from(json["data"]);
+      });
+    }
+  }
+
+  double get totalQty {
+    return ingredients.fold(
+      0,
+          (sum, item) =>
+      sum + ((item["quantity"] ?? 0) as num).toDouble(),
+    );
+  }
+
+  double get totalAmount {
+    return ingredients.fold(
+      0,
+          (sum, item) =>
+      sum +
+          (((item["quantity"] ?? 0) as num).toDouble() *
+              ((item["unitRate"] ?? 0) as num).toDouble()),
+    );
+  }
+
+  Future<void> savePurchaseRequest() async {
+    final body = {
+      "fromDate": widget.fromDate,
+      "toDate": widget.toDate,
+      "mealIds": widget.mealIds.split(",").map(int.parse).toList(),
+      "kitchenIds": widget.kitchenIds.split(",").map(int.parse).toList(),
+      "ingredients": ingredients
+          .map((e) => {
+        "ingredientId": e["ingredientId"],
+        "quantity": e["quantity"]
+      })
+          .toList()
+    };
+
+    print(jsonEncode(body));
+
+    /// Replace with your save API
+    final response = await http.post(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/savePurchaseRequest"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(json["status"]["message"])),
+      );
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to save PR")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Preview"),
+        backgroundColor: const Color(0xFF010440),
+        foregroundColor: Colors.white,
+      ),
+      body: ingredientMaster.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          Card(
+            margin: const EdgeInsets.all(12),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  summary("Items", ingredients.length.toString()),
+                  summary("Qty", totalQty.toStringAsFixed(2)),
+                  summary("Amount",
+                      "₹${totalAmount.toStringAsFixed(2)}"),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 8,
+                horizontalMargin: 6,
+                dataRowMinHeight: 40,
+                dataRowMaxHeight: 40,
+                headingRowHeight: 36,
+                headingRowColor:
+                WidgetStateProperty.all(const Color(0xFFF15F28)),
+                headingTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                dataTextStyle: const TextStyle(fontSize: 11),
+                columns: const [
+                  DataColumn(label: Text("Ingredient")),
+                  DataColumn(label: Text("Qty")),
+                  DataColumn(label: Text("Rate")),
+                  DataColumn(label: Text("Cost")),
+                  DataColumn(label: Text("")),
+                ],
+                rows: ingredients.map((item) {
+
+                  Map<String, dynamic>? selectedIngredient;
+
+                  try {
+                    selectedIngredient = ingredientMaster.firstWhere(
+                          (e) => e["id"].toString() == item["ingredientId"].toString(),
+                    );
+                  } catch (_) {
+                    selectedIngredient = null;
+                  }
+
+                  return DataRow(
+                    cells: [
+                      /// Ingredient
+                      DataCell(
+                        SizedBox(
+                          width: 170,
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<Map<String, dynamic>>(
+                              isExpanded: true,
+                              iconSize: 18,
+                              value: selectedIngredient,
+                              hint: Text(
+                                "${item["ingredientName"]}",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              items: ingredientMaster.map((ingredient) {
+                                return DropdownMenuItem<Map<String, dynamic>>(
+                                  value: ingredient,
+                                  child: SizedBox(
+                                    width: 170,
+                                    child: Text(
+                                      ingredient["name"],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (selected) {
+                                if (selected == null) return;
+
+                                setState(() {
+                                  item["ingredientId"] = selected["id"];
+
+                                  final name =
+                                      selected["name"]?.toString() ?? "";
+
+                                  final parts = name.split(" - ");
+
+                                  item["ingredientName"] = parts.first;
+                                  item["erpId"] =
+                                  parts.length > 1 ? parts.last : "";
+
+                                  item["unitRate"] =
+                                      (selected["cost"] as num?)?.toDouble() ??
+                                          0;
+
+                                  item["name"] = selected["uomName"];
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      /// Qty
+                      DataCell(
+                        SizedBox(
+                          width: 55,
+                          child: TextFormField(
+                            initialValue: item["quantity"].toString(),
+                            style: const TextStyle(fontSize: 11),
+                            textAlign: TextAlign.center,
+                            keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 6),
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                item["quantity"] =
+                                    double.tryParse(value) ?? 0;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+
+                      /// Rate
+                      DataCell(
+                        SizedBox(
+                          width: 55,
+                          child: Text(
+                            "₹${(item["unitRate"] as num).toStringAsFixed(0)}",
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+
+                      /// Cost
+                      DataCell(
+                        SizedBox(
+                          width: 65,
+                          child: Text(
+                            "₹${(((item["quantity"] ?? 0) as num).toDouble() * ((item["unitRate"] ?? 0) as num).toDouble()).toStringAsFixed(0)}",
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+
+                      /// Delete
+                      DataCell(
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          iconSize: 18,
+                          splashRadius: 18,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              ingredients.remove(item);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF15F28),
+                ),
+                onPressed: savePurchaseRequest,
+                icon: const Icon(Icons.save),
+                label: const Text(
+                  "Save Purchase Request",
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget summary(String title, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        const SizedBox(height: 5),
+        Text(title),
+      ],
     );
   }
 }

@@ -360,13 +360,16 @@ class _PurchaseRequestDetailsPageState
 
   Future<void> loadIngredients() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.localBaseUrl}/api/ingredientAllGet/list"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/ingredientAllGet/list"),
     );
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      ingredientMaster = List<Map<String, dynamic>>.from(json["data"]);
+      setState(() {
+        ingredientMaster =
+        List<Map<String, dynamic>>.from(json["data"]);
+      });
     }
   }
 
@@ -550,37 +553,44 @@ class _PurchaseRequestDetailsPageState
 
             /// Ingredient Table
             Card(
+              elevation: 2,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(Color(0xFFF15F28)),
+                  columnSpacing: 10,
+                  horizontalMargin: 8,
+                  dataRowMinHeight: 42,
+                  dataRowMaxHeight: 42,
+                  headingRowHeight: 38,
+                  headingTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  dataTextStyle: const TextStyle(fontSize: 12),
+                  headingRowColor: WidgetStateProperty.all(
+                    const Color(0xFFF15F28),
+                  ),
                   columns: const [
                     DataColumn(label: Text("Ingredient")),
                     DataColumn(label: Text("Qty")),
-                    DataColumn(label: Text("Rate")),
                     DataColumn(label: Text("Cost")),
-                    DataColumn(label: Text("Delete")),
+                    DataColumn(label: Text("Rate")),
+                    DataColumn(label: Text("")),
                   ],
                   rows: (prDetails!["ingredients"] as List).map<DataRow>((
                     item,
                   ) {
-                    double qty = item["quantity"] ?? 0.0;
-                    double rate = item["unitRate"] ?? 0.0;
-
                     return DataRow(
                       cells: [
+                        /// Ingredient
                         DataCell(
                           SizedBox(
-                            width: 250,
+                            width: 170,
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<Map<String, dynamic>>(
                                 isExpanded: true,
-
-                                hint: Text(
-                                  "${item["ingredientName"]} - ${item["erpId"]}",
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-
+                                iconSize: 18,
                                 value:
                                     ingredientMaster.any(
                                       (e) =>
@@ -593,22 +603,21 @@ class _PurchaseRequestDetailsPageState
                                             item["ingredientId"].toString(),
                                       )
                                     : null,
-
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  color: Colors.orange,
+                                hint: Text(
+                                  "${item["ingredientName"]}",
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-
                                 items: ingredientMaster.map((ingredient) {
                                   return DropdownMenuItem<Map<String, dynamic>>(
                                     value: ingredient,
                                     child: Text(
                                       ingredient["name"],
                                       overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                   );
                                 }).toList(),
-
                                 onChanged: (selected) {
                                   if (selected == null) return;
 
@@ -634,15 +643,27 @@ class _PurchaseRequestDetailsPageState
                             ),
                           ),
                         ),
+
+                        /// Qty
                         DataCell(
                           SizedBox(
-                            width: 90,
-
+                            width: 55,
                             child: TextFormField(
                               initialValue: item["quantity"].toString(),
-
-                              keyboardType: TextInputType.number,
-
+                              style: const TextStyle(fontSize: 12),
+                              textAlign: TextAlign.center,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 8,
+                                ),
+                                border: OutlineInputBorder(),
+                              ),
                               onChanged: (value) {
                                 setState(() {
                                   item["quantity"] =
@@ -653,22 +674,37 @@ class _PurchaseRequestDetailsPageState
                           ),
                         ),
 
+                        /// Cost
                         DataCell(
-                          Text(
-                            "₹${(item["unitRate"] as num).toStringAsFixed(2)}",
+                          SizedBox(
+                            width: 65,
+                            child: Text(
+                              "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0)).toStringAsFixed(0)}",
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                         ),
 
+                        /// Rate
                         DataCell(
-                          Text(
-                            "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0)).toStringAsFixed(2)}",
+                          SizedBox(
+                            width: 55,
+                            child: Text(
+                              "₹${(item["unitRate"] as num).toStringAsFixed(0)}",
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                         ),
-
+                        /// Delete
                         DataCell(
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            iconSize: 18,
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                            ),
                             onPressed: () {
                               setState(() {
                                 ingredients.remove(item);
@@ -682,6 +718,7 @@ class _PurchaseRequestDetailsPageState
                 ),
               ),
             ),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
