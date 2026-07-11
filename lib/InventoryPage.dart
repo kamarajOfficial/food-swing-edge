@@ -5,11 +5,20 @@ import 'PurchaseRequestPage.dart';
 
 class InventoryPage extends StatelessWidget {
   final String companyId;
+  final Set<String> inventoryRoles;
 
-  const InventoryPage({Key? key, required this.companyId}) : super(key: key);
+  InventoryPage({
+    Key? key,
+    required this.companyId,
+    required this.inventoryRoles,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final visibleModules = modules.where((module) {
+      return inventoryRoles.contains(module["title"]);
+    }).toList();
+
     return Scaffold(
       // appBar: AppBar(
       // title: const Text("Inventory"),
@@ -29,139 +38,29 @@ class InventoryPage extends StatelessWidget {
             // ),
             const SizedBox(height: 6),
 
-            GridView.count(
+            GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 3,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 5,
-              mainAxisSpacing: 8,
-              children: [
-                _menuCard(
+              itemCount: visibleModules.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.8,
+                crossAxisSpacing: 5,
+                mainAxisSpacing: 8,
+              ),
+              itemBuilder: (context, index) {
+                final module = visibleModules[index];
+
+                return _menuCard(
                   context,
-                  Icons.description,
-                  "Purchase Request",
-                  Colors.orange,
-                  count: 12,
-
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => PurchaseRequestPage(companyId: companyId),
-                      ),
-                    );
-                  },
-
-                  onAdd: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => PurchaseRequestPage(companyId: companyId),
-                      ),
-                    );
-                  },
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.shopping_cart,
-                  "Purchase Order",
-                  Colors.blue,
-                  count: 8,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PurchaseOrderPage(companyId: companyId),
-                      ),
-                    );
-                  },
-
-                  onAdd: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PurchaseOrderPage(companyId: companyId),
-                      ),
-                    );
-                  },
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.inventory,
-                  "Goods Receipt",
-                  Colors.green,
-                  count: 5,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.receipt_long,
-                  "Purchase Invoice",
-                  Colors.purple,
-                  count: 6,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.warehouse,
-                  "Warehouse",
-                  Colors.brown,
-                  count: 132,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.kitchen,
-                  "Kitchen Request",
-                  Colors.deepOrange,
-                  count: 7,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.swap_horiz,
-                  "Stock Transfer",
-                  Colors.teal,
-                  count: 4,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.restaurant,
-                  "Kitchen Stock",
-                  Colors.indigo,
-                  count: 86,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.local_dining,
-                  "Consumption",
-                  Colors.orange,
-                  count: 28,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.warning_amber,
-                  "Low Stock Items",
-                  Colors.redAccent,
-                  count: 9,
-                ),
-
-                _menuCard(
-                  context,
-                  Icons.inventory_2,
-                  "Total Items",
-                  Colors.blueGrey,
-                  count: 132,
-                ),
-              ],
+                  module["icon"] as IconData,
+                  module["title"] as String,
+                  module["color"] as Color,
+                  count: module["count"] as int,
+                  onTap: () => _openModule(context, module["title"] as String),
+                  onAdd: () => _openModule(context, module["title"] as String),
+                );
+              },
             ),
 
             const SizedBox(height: 15),
@@ -170,6 +69,124 @@ class InventoryPage extends StatelessWidget {
       ),
     );
   }
+
+  void _openModule(BuildContext context, String title) {
+    switch (title) {
+      case "Purchase Request":
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PurchaseRequestPage(companyId: companyId),
+          ),
+        );
+        break;
+
+      case "Purchase Order":
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PurchaseOrderPage(companyId: companyId),
+          ),
+        );
+        break;
+
+      case "Goods Receipt":
+        break;
+
+      case "Purchase Invoice":
+        break;
+
+      case "Warehouse":
+        break;
+
+      case "Kitchen Request":
+        break;
+
+      case "Stock Transfer":
+        break;
+
+      case "Kitchen Stock":
+        break;
+
+      case "Consumption":
+        break;
+
+      case "Low Stock Items":
+        break;
+
+      case "Total Items":
+        break;
+    }
+  }
+
+  final modules = [
+    {
+      "title": "Purchase Request",
+      "icon": Icons.description,
+      "color": Colors.orange,
+      "count": 12,
+    },
+    {
+      "title": "Purchase Order",
+      "icon": Icons.shopping_cart,
+      "color": Colors.blue,
+      "count": 8,
+    },
+    {
+      "title": "Goods Receipt",
+      "icon": Icons.inventory,
+      "color": Colors.green,
+      "count": 5,
+    },
+    {
+      "title": "Purchase Invoice",
+      "icon": Icons.receipt_long,
+      "color": Colors.purple,
+      "count": 6,
+    },
+    {
+      "title": "Warehouse",
+      "icon": Icons.warehouse,
+      "color": Colors.brown,
+      "count": 132,
+    },
+    {
+      "title": "Kitchen Request",
+      "icon": Icons.kitchen,
+      "color": Colors.deepOrange,
+      "count": 7,
+    },
+    {
+      "title": "Stock Transfer",
+      "icon": Icons.swap_horiz,
+      "color": Colors.teal,
+      "count": 4,
+    },
+    {
+      "title": "Kitchen Stock",
+      "icon": Icons.restaurant,
+      "color": Colors.indigo,
+      "count": 86,
+    },
+    {
+      "title": "Consumption",
+      "icon": Icons.local_dining,
+      "color": Colors.orange,
+      "count": 28,
+    },
+    {
+      "title": "Low Stock Items",
+      "icon": Icons.warning_amber,
+      "color": Colors.redAccent,
+      "count": 9,
+    },
+    {
+      "title": "Total Items",
+      "icon": Icons.inventory_2,
+      "color": Colors.blueGrey,
+      "count": 132,
+    },
+  ];
 
   Widget _menuCard(
     BuildContext context,

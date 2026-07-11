@@ -337,245 +337,234 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 // Continue button
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _isButtonEnabled
-                            ? const Color(0xFFF15F28)
-                            : Colors.grey,
+                    backgroundColor: _isButtonEnabled
+                        ? const Color(0xFFF15F28)
+                        : Colors.grey,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed:
-                      _isButtonEnabled
-                          ? () async {
-                            final phone = _phoneController.text.trim();
-                            final password = _passwordController.text.trim();
+                  onPressed: _isButtonEnabled
+                      ? () async {
+                          final phone = _phoneController.text.trim();
+                          final password = _passwordController.text.trim();
 
-                            try {
-                              // 🔥 Fetch device ID
-                              final deviceId = await _getDeviceId();
-                              print("DeviceID: $deviceId");
+                          try {
+                            // 🔥 Fetch device ID
+                            final deviceId = await _getDeviceId();
+                            print("DeviceID: $deviceId");
 
-                              // ✅ Prepare payload WITH deviceId
-                              final payload = {
-                                "phoneNumber": int.parse(phone),
-                                "username": password,
-                                "deviceId": deviceId, // 👈 ADD THIS
-                              };
+                            // ✅ Prepare payload WITH deviceId
+                            final payload = {
+                              "phoneNumber": int.parse(phone),
+                              "username": password,
+                              "deviceId": deviceId, // 👈 ADD THIS
+                            };
 
-                              print("Payload: $payload");
+                            print("Payload: $payload");
 
-                              // ✅ Make API request
-                              final response = await http.post(
-                                Uri.parse("${AppConfig.localBaseUrl}/api/saveLogin"),
-                                headers: {"Content-Type": "application/json"},
-                                body: jsonEncode(payload),
-                              );
+                            // ✅ Make API request
+                            final response = await http.post(
+                              Uri.parse(
+                                "${AppConfig.localBaseUrl}/api/saveLogin",
+                              ),
+                              headers: {"Content-Type": "application/json"},
+                              body: jsonEncode(payload),
+                            );
 
-                              final jsonResponse = jsonDecode(response.body);
+                            final jsonResponse = jsonDecode(response.body);
 
-                              final message = jsonResponse['status']['message'];
-                              final data =
-                                  jsonResponse['data']; // may be null for some cases
-                              if (response.statusCode == 200) {
-                                // ✅ Case 1: DRIVER LOGIN
-                                if (message ==
-                                        "Phone number belongs to a driver." &&
-                                    data != null) {
-                                  final phoneNumber =
-                                      data['phoneNumber'].toString();
+                            final message = jsonResponse['status']['message'];
+                            final data =
+                                jsonResponse['data']; // may be null for some cases
+                            if (response.statusCode == 200) {
+                              // ✅ Case 1: DRIVER LOGIN
+                              if (message ==
+                                      "Phone number belongs to a driver." &&
+                                  data != null) {
+                                final phoneNumber = data['phoneNumber']
+                                    .toString();
 
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => MainTabPage(
-                                            username: phoneNumber,
-                                            companyId: '',
-                                            companyName: "Driver",
-                                            subCustomerId: '',
-                                            phoneNumber: phoneNumber,
-                                            loginSessions: const [],
-                                            isDriver: true,
-                                          ),
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MainTabPage(
+                                      username: phoneNumber,
+                                      companyId: '',
+                                      companyName: "Driver",
+                                      subCustomerId: '',
+                                      phoneNumber: phoneNumber,
+                                      loginSessions: const [],
+                                      isDriver: true,
                                     ),
-                                    (route) =>
-                                        false, // remove all previous routes
-                                  );
+                                  ),
+                                  (route) =>
+                                      false, // remove all previous routes
+                                );
+                              }
+                              // ✅ Case 2: Foodswing user login (No need to check loginSession availability)
+                              if (message == "Foodswing user login" &&
+                                  data != null) {
+                                final loginSessions =
+                                    data['loginSession'] as List<dynamic>? ??
+                                    [];
+                                final phoneNumber = data['phoneNumber'];
+
+                                // Extract company names safely
+                                final uniqueCompanies =
+                                    <String, Map<String, String>>{};
+
+                                for (var session in loginSessions) {
+                                  final id = session["companyId"].toString();
+                                  final name = session["companyName"]
+                                      .toString();
+
+                                  // Insert only if not seen already
+                                  uniqueCompanies[id] = {
+                                    "companyId": id,
+                                    "companyName": name,
+                                  };
                                 }
-                                // ✅ Case 2: Foodswing user login (No need to check loginSession availability)
-                                if (message == "Foodswing user login" &&
-                                    data != null) {
-                                  final loginSessions =
-                                      data['loginSession'] as List<dynamic>? ??
-                                      [];
+
+                                final companies = uniqueCompanies.values
+                                    .toList();
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FsAnimationScreen(
+                                      username: data['username'].toString(),
+                                      companies: companies,
+                                      companyId: "",
+                                      subCustomerId: '',
+                                      phoneNumber: phoneNumber,
+                                      loginSessions: loginSessions,
+                                      // even if empty
+                                      isDriver: false,
+                                      isFsCustomer:
+                                          message ==
+                                          "Foodswing user login", // always true for this case
+                                    ),
+                                  ),
+                                );
+                                return; // Stop other checks
+                              }
+
+                              // ✅ Case 1: Already approved
+                              if (message ==
+                                      "This phone number is already approved and active." &&
+                                  data != null) {
+                                final loginSessions =
+                                    data['loginSession'] as List<dynamic>?;
+
+                                if (loginSessions != null &&
+                                    loginSessions.isNotEmpty) {
                                   final phoneNumber = data['phoneNumber'];
 
-                                  // Extract company names safely
-                                  final uniqueCompanies =
-                                      <String, Map<String, String>>{};
+                                  // Extract all company names (avoid duplicates)
+                                  final companyNames = loginSessions
+                                      .map(
+                                        (s) =>
+                                            s['companyName']?.toString() ?? '',
+                                      )
+                                      .toSet()
+                                      .toList();
 
-                                  for (var session in loginSessions) {
-                                    final id = session["companyId"].toString();
-                                    final name =
-                                        session["companyName"].toString();
-
-                                    // Insert only if not seen already
-                                    uniqueCompanies[id] = {
-                                      "companyId": id,
-                                      "companyName": name,
-                                    };
-                                  }
-
-                                  final companies =
-                                      uniqueCompanies.values.toList();
-
+                                  // ✅ Pass the entire loginSession list to the next screen
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder:
-                                          (_) => FsAnimationScreen(
-                                            username:
-                                                data['username'].toString(),
-                                            companies: companies,
-                                            companyId: "",
-                                            subCustomerId: '',
-                                            phoneNumber: phoneNumber,
-                                            loginSessions: loginSessions,
-                                            // even if empty
-                                            isDriver: false,
-                                            isFsCustomer:
-                                                message ==
-                                                "Foodswing user login", // always true for this case
-                                          ),
+                                      builder: (_) => StalinAnimationScreen(
+                                        username: data['username'].toString(),
+                                        // or any display name
+                                        companies: companyNames,
+                                        companyId: loginSessions
+                                            .first['companyId']
+                                            .toString(),
+                                        subCustomerId: '',
+                                        // not needed if multiple
+                                        phoneNumber: phoneNumber,
+                                        loginSessions:
+                                            loginSessions, // 👈 pass full list
+                                      ),
                                     ),
                                   );
-                                  return; // Stop other checks
-                                }
-
-                                // ✅ Case 1: Already approved
-                                if (message ==
-                                        "This phone number is already approved and active." &&
-                                    data != null) {
-                                  final loginSessions =
-                                      data['loginSession'] as List<dynamic>?;
-
-                                  if (loginSessions != null &&
-                                      loginSessions.isNotEmpty) {
-                                    final phoneNumber = data['phoneNumber'];
-
-                                    // Extract all company names (avoid duplicates)
-                                    final companyNames =
-                                        loginSessions
-                                            .map(
-                                              (s) =>
-                                                  s['companyName']
-                                                      ?.toString() ??
-                                                  '',
-                                            )
-                                            .toSet()
-                                            .toList();
-
-                                    // ✅ Pass the entire loginSession list to the next screen
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => StalinAnimationScreen(
-                                              username:
-                                                  data['username'].toString(),
-                                              // or any display name
-                                              companies: companyNames,
-                                              companyId:
-                                                  loginSessions
-                                                      .first['companyId']
-                                                      .toString(),
-                                              subCustomerId: '',
-                                              // not needed if multiple
-                                              phoneNumber: phoneNumber,
-                                              loginSessions:
-                                                  loginSessions, // 👈 pass full list
-                                            ),
-                                      ),
-                                    );
-                                  } else {
-                                    // Handle case where no login sessions are returned
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "No active sub-customer sessions found.",
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
-                                // ✅ Case 2: Pending approval
-                                else if (message == "Pending for Approval") {
+                                } else {
+                                  // Handle case where no login sessions are returned
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        "Pending for approval. Please wait for admin approval.",
+                                        "No active sub-customer sessions found.",
                                       ),
-                                      backgroundColor: Color(0xFFF15F28),
-                                    ),
-                                  );
-                                }
-                                // ✅ Case 3: OTP sent — Go to OTP Page
-                                else if (message ==
-                                    "User registered successfully. OTP sent to phone.") {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => OtpVerificationPage(
-                                            phoneNumber: phone,
-                                            username: password,
-                                          ),
-                                    ),
-                                  );
-                                } else if (message == "New OTP generated.") {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => OtpVerificationPage(
-                                            phoneNumber: phone,
-                                            username: password,
-                                          ),
-                                    ),
-                                  );
-                                }
-                                // ✅ Unknown case
-                                else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(message),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
-                              } else {
+                              }
+                              // ✅ Case 2: Pending approval
+                              else if (message == "Pending for Approval") {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Pending for approval. Please wait for admin approval.",
+                                    ),
+                                    backgroundColor: Color(0xFFF15F28),
+                                  ),
+                                );
+                              }
+                              // ✅ Case 3: OTP sent — Go to OTP Page
+                              else if (message ==
+                                  "User registered successfully. OTP sent to phone.") {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OtpVerificationPage(
+                                      phoneNumber: phone,
+                                      username: password,
+                                    ),
+                                  ),
+                                );
+                              } else if (message == "New OTP generated.") {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OtpVerificationPage(
+                                      phoneNumber: phone,
+                                      username: password,
+                                    ),
+                                  ),
+                                );
+                              }
+                              // ✅ Unknown case
+                              else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text(
-                                      "Server Error: ${response.statusCode}",
-                                    ),
+                                    content: Text(message),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
                               }
-                            } catch (e) {
+                            } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text("Network error: $e"),
+                                  content: Text(
+                                    "Server Error: ${response.statusCode}",
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
                             }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Network error: $e"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
-                          : null,
+                        }
+                      : null,
                   child: Text(
                     "continue".tr(),
                     style: TextStyle(color: Colors.white, fontSize: 16),
@@ -642,7 +631,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   List<String> _selectedDesignations = [];
 
   // ✅ Replace with your real backend URL
-  final String apiUrl = "${AppConfig.localBaseUrl}/api/getSubCustomerMasterMobile";
+  final String apiUrl =
+      "${AppConfig.localBaseUrl}/api/getSubCustomerMasterMobile";
 
   Future<void> _fetchSubCustomers() async {
     setState(() => _isLoading = true);
@@ -676,8 +666,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   }
 
   List<String> get _companies {
-    final companyNames =
-        _subCustomers.map((e) => e['uomName'].toString()).toSet().toList();
+    final companyNames = _subCustomers
+        .map((e) => e['uomName'].toString())
+        .toSet()
+        .toList();
     companyNames.sort();
     return companyNames;
   }
@@ -706,419 +698,399 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child:
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            // IconButton(
-                            //   // icon: const Icon(Icons.arrow_back),
-                            //   onPressed: () => Navigator.pop(context),
-                            // ),
-                            const Spacer(),
-                            Align(
-                              alignment: Alignment.topRight,
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0.9, end: 2.0),
-                                // scale range
-                                duration: const Duration(seconds: 2),
-                                curve: Curves.easeInOut,
-                                builder: (context, scale, child) {
-                                  return Transform.scale(
-                                    scale: scale,
-                                    child: child,
-                                  );
-                                },
-                                child: Image.asset(
-                                  'assets/images/sauceit.png',
-                                  height: 80, // make it larger
-                                  fit: BoxFit.contain,
-                                ),
-                                onEnd: () {
-                                  // Optional: To make it loop, use a StatefulWidget + reverse animation
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
-                        const Text(
-                          "Enter Code",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: List.generate(
-                            4,
-                            (index) => SizedBox(
-                              width: 55,
-                              height: 55,
-                              child: TextField(
-                                controller: _otpControllers[index],
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                maxLength: 1,
-                                decoration: InputDecoration(
-                                  counterText: "",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                onChanged: (value) {
-                                  if (value.isNotEmpty && index < 3) {
-                                    FocusScope.of(context).nextFocus();
-                                  }
-                                  if (value.isEmpty && index > 0) {
-                                    FocusScope.of(context).previousFocus();
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        GestureDetector(
-                          onTap: () {
-                            // OPEN THE MULTI SELECT DIALOG
-                            showDialog(
-                              context: context,
-                              builder: (ctx) {
-                                return MultiSelectDialog(
-                                  items: _designationItems,
-                                  initialValue: _selectedDesignations,
-                                  title: Text("select_designations".tr()),
-                                  selectedColor: const Color(0xFFF15F28),
-                                  height: 250,
-                                  width: 300,
-                                  onConfirm: (values) {
-                                    setState(() {
-                                      _selectedDesignations =
-                                          values.cast<String>();
-                                    });
-                                  },
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          // IconButton(
+                          //   // icon: const Icon(Icons.arrow_back),
+                          //   onPressed: () => Navigator.pop(context),
+                          // ),
+                          const Spacer(),
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.9, end: 2.0),
+                              // scale range
+                              duration: const Duration(seconds: 2),
+                              curve: Curves.easeInOut,
+                              builder: (context, scale, child) {
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: child,
                                 );
                               },
-                            );
-                          },
-
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Wrap(
-                              spacing: 10, // space between columns
-                              runSpacing: 0, // space between rows
-                              children: [
-                                if (_selectedDesignations.isEmpty)
-                                  Text(
-                                    "select_designations".tr(),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-
-                                // Chips in fixed-width boxes (2 per row)
-                                ..._selectedDesignations.map((d) {
-                                  return SizedBox(
-                                    width:
-                                        (MediaQuery.of(context).size.width -
-                                            90) /
-                                        2, // 2 columns
-                                    child: Chip(
-                                      label: Text(
-                                        d,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                      backgroundColor: const Color(
-                                        0xFFF15F28,
-                                      ).withOpacity(0.2),
-                                      labelStyle: const TextStyle(
-                                        color: Color(0xFFF15F28),
-                                      ),
-                                      deleteIcon: const Icon(
-                                        Icons.close,
-                                        size: 18,
-                                        color: Color(0xFFF15F28),
-                                      ),
-                                      onDeleted: () {
-                                        setState(() {
-                                          _selectedDesignations.remove(d);
-                                        });
-                                      },
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        side: const BorderSide(
-                                          color: Color(0xFFF15F28),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-
-                                // dropdown arrow aligned right
-                                const Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Icon(Icons.arrow_drop_down),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ✅ Company dropdown
-                        DropdownButtonFormField<String>(
-                          value: _selectedCompany,
-                          decoration: InputDecoration(
-                            labelText: "select_company".tr(),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          items:
-                              _companies
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text(c),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCompany = value;
-                              _selectedSubCustomers = [];
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // ✅ Sub-customer dropdown
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "select_sub_customers".tr(),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                              child: Image.asset(
+                                'assets/images/sauceit.png',
+                                height: 80, // make it larger
+                                fit: BoxFit.contain,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            // "Select All" checkbox
-                            CheckboxListTile(
-                              title: Text(
-                                "select_all".tr(),
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              value: _selectAll,
-                              controlAffinity: ListTileControlAffinity.leading,
-                              onChanged: (checked) {
-                                setState(() {
-                                  _selectAll = checked ?? false;
-
-                                  if (_selectAll) {
-                                    // Select all
-                                    _selectedSubCustomers =
-                                        _filteredSubCustomers
-                                            .map((e) => e['name'] as String)
-                                            .toList();
-                                  } else {
-                                    // Unselect all
-                                    _selectedSubCustomers.clear();
-                                  }
-                                });
+                              onEnd: () {
+                                // Optional: To make it loop, use a StatefulWidget + reverse animation
                               },
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                      const Text(
+                        "Enter Code",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(
+                          4,
+                          (index) => SizedBox(
+                            width: 55,
+                            height: 55,
+                            child: TextField(
+                              controller: _otpControllers[index],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              maxLength: 1,
+                              decoration: InputDecoration(
+                                counterText: "",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty && index < 3) {
+                                  FocusScope.of(context).nextFocus();
+                                }
+                                if (value.isEmpty && index > 0) {
+                                  FocusScope.of(context).previousFocus();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
 
-                            // Sub-customer checkboxes
-                            ..._filteredSubCustomers.map((sub) {
-                              final name = sub['name'] as String;
-                              final isSelected = _selectedSubCustomers.contains(
-                                name,
-                              );
-                              return CheckboxListTile(
-                                title: Text(name),
-                                value: isSelected,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                onChanged: (checked) {
+                      GestureDetector(
+                        onTap: () {
+                          // OPEN THE MULTI SELECT DIALOG
+                          showDialog(
+                            context: context,
+                            builder: (ctx) {
+                              return MultiSelectDialog(
+                                items: _designationItems,
+                                initialValue: _selectedDesignations,
+                                title: Text("select_designations".tr()),
+                                selectedColor: const Color(0xFFF15F28),
+                                height: 250,
+                                width: 300,
+                                onConfirm: (values) {
                                   setState(() {
-                                    if (checked == true) {
-                                      _selectedSubCustomers.add(name);
-                                    } else {
-                                      _selectedSubCustomers.remove(name);
-                                    }
-
-                                    // Auto-update "Select All"
-                                    _selectAll =
-                                        _selectedSubCustomers.length ==
-                                        _filteredSubCustomers.length;
+                                    _selectedDesignations = values
+                                        .cast<String>();
                                   });
                                 },
                               );
-                            }).toList(),
-                          ],
-                        ),
+                            },
+                          );
+                        },
 
-                        const SizedBox(height: 40),
-
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF15F28),
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          onPressed:
-                              (_selectedCompany != null &&
-                                      _selectedSubCustomers.isNotEmpty &&
-                                      _selectedDesignations.isNotEmpty)
-                                  ? () async {
-                                    final otp =
-                                        _otpControllers
-                                            .map((c) => c.text)
-                                            .join();
-                                    if (otp.length != 4) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text("otp".tr()),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    // 👉 ADD THIS VALIDATION HERE
-                                    if (_selectedDesignations.isEmpty) {
-                                      _showError(
-                                        "Please select at least one designation!",
-                                      );
-                                      return;
-                                    }
+                          child: Wrap(
+                            spacing: 10, // space between columns
+                            runSpacing: 0, // space between rows
+                            children: [
+                              if (_selectedDesignations.isEmpty)
+                                Text(
+                                  "select_designations".tr(),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
 
-                                    final selectedSessions =
-                                        _filteredSubCustomers
-                                            .where(
-                                              (e) => _selectedSubCustomers
-                                                  .contains(e['name']),
-                                            )
-                                            .map(
-                                              (e) => {
-                                                "id": 0,
-                                                "userId": 0,
-                                                "companyId": e['uomId'],
-                                                "subCustomerId": e['id'],
-                                              },
-                                            )
-                                            .toList();
-
-                                    final payload = {
-                                      "otp": otp,
-                                      "phoneNumber": int.parse(
-                                        widget.phoneNumber,
-                                      ),
-                                      "officers": _selectedDesignations.join(
-                                        ",",
-                                      ),
-                                      "loginSession": selectedSessions,
-                                    };
-
-                                    setState(() => _isLoading = true);
-
-                                    try {
-                                      final response = await http.post(
-                                        Uri.parse(
-                                          "${AppConfig.localBaseUrl}/api/verifyOtp",
-                                        ),
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                        },
-                                        body: jsonEncode(payload),
-                                      );
-
-                                      final jsonResponse = jsonDecode(
-                                        response.body,
-                                      );
-
-                                      if (response.statusCode == 200 &&
-                                          jsonResponse['status']['code'] ==
-                                              200) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "OTP verified successfully. Waiting for admin approval...",
-                                            ),
-                                            backgroundColor: Colors.green,
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-
-                                        // ⏳ Wait so user can read the message
-                                        await Future.delayed(
-                                          const Duration(seconds: 2),
-                                        );
-                                        // ✅ Navigate and pass all selected sessions
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (_) => GetStartedPage(
-                                                  // 👈 pass the full list
-                                                ),
-                                          ),
-                                        );
-                                      } else {
-                                        _showError(
-                                          jsonResponse['status']['message'] ??
-                                              'Invalid OTP, please try again',
-                                        );
-                                      }
-                                    } catch (e) {
-                                      _showError('Network error: $e');
-                                    }
-
-                                    setState(() => _isLoading = false);
-                                  }
-                                  : null,
-                          child:
-                              _isLoading
-                                  ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
+                              // Chips in fixed-width boxes (2 per row)
+                              ..._selectedDesignations.map((d) {
+                                return SizedBox(
+                                  width:
+                                      (MediaQuery.of(context).size.width - 90) /
+                                      2, // 2 columns
+                                  child: Chip(
+                                    label: Text(
+                                      d,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
-                                  )
-                                  : Text(
-                                    "sign_in".tr(),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
+                                    backgroundColor: const Color(
+                                      0xFFF15F28,
+                                    ).withOpacity(0.2),
+                                    labelStyle: const TextStyle(
+                                      color: Color(0xFFF15F28),
+                                    ),
+                                    deleteIcon: const Icon(
+                                      Icons.close,
+                                      size: 18,
+                                      color: Color(0xFFF15F28),
+                                    ),
+                                    onDeleted: () {
+                                      setState(() {
+                                        _selectedDesignations.remove(d);
+                                      });
+                                    },
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: const BorderSide(
+                                        color: Color(0xFFF15F28),
+                                      ),
                                     ),
                                   ),
+                                );
+                              }).toList(),
+
+                              // dropdown arrow aligned right
+                              const Align(
+                                alignment: Alignment.centerRight,
+                                child: Icon(Icons.arrow_drop_down),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ✅ Company dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedCompany,
+                        decoration: InputDecoration(
+                          labelText: "select_company".tr(),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        items: _companies
+                            .map(
+                              (c) => DropdownMenuItem(value: c, child: Text(c)),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCompany = value;
+                            _selectedSubCustomers = [];
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // ✅ Sub-customer dropdown
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "select_sub_customers".tr(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // "Select All" checkbox
+                          CheckboxListTile(
+                            title: Text(
+                              "select_all".tr(),
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            value: _selectAll,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            onChanged: (checked) {
+                              setState(() {
+                                _selectAll = checked ?? false;
+
+                                if (_selectAll) {
+                                  // Select all
+                                  _selectedSubCustomers = _filteredSubCustomers
+                                      .map((e) => e['name'] as String)
+                                      .toList();
+                                } else {
+                                  // Unselect all
+                                  _selectedSubCustomers.clear();
+                                }
+                              });
+                            },
+                          ),
+
+                          // Sub-customer checkboxes
+                          ..._filteredSubCustomers.map((sub) {
+                            final name = sub['name'] as String;
+                            final isSelected = _selectedSubCustomers.contains(
+                              name,
+                            );
+                            return CheckboxListTile(
+                              title: Text(name),
+                              value: isSelected,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _selectedSubCustomers.add(name);
+                                  } else {
+                                    _selectedSubCustomers.remove(name);
+                                  }
+
+                                  // Auto-update "Select All"
+                                  _selectAll =
+                                      _selectedSubCustomers.length ==
+                                      _filteredSubCustomers.length;
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ],
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF15F28),
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed:
+                            (_selectedCompany != null &&
+                                _selectedSubCustomers.isNotEmpty &&
+                                _selectedDesignations.isNotEmpty)
+                            ? () async {
+                                final otp = _otpControllers
+                                    .map((c) => c.text)
+                                    .join();
+                                if (otp.length != 4) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("otp".tr()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                // 👉 ADD THIS VALIDATION HERE
+                                if (_selectedDesignations.isEmpty) {
+                                  _showError(
+                                    "Please select at least one designation!",
+                                  );
+                                  return;
+                                }
+
+                                final selectedSessions = _filteredSubCustomers
+                                    .where(
+                                      (e) => _selectedSubCustomers.contains(
+                                        e['name'],
+                                      ),
+                                    )
+                                    .map(
+                                      (e) => {
+                                        "id": 0,
+                                        "userId": 0,
+                                        "companyId": e['uomId'],
+                                        "subCustomerId": e['id'],
+                                      },
+                                    )
+                                    .toList();
+
+                                final payload = {
+                                  "otp": otp,
+                                  "phoneNumber": int.parse(widget.phoneNumber),
+                                  "officers": _selectedDesignations.join(","),
+                                  "loginSession": selectedSessions,
+                                };
+
+                                setState(() => _isLoading = true);
+
+                                try {
+                                  final response = await http.post(
+                                    Uri.parse(
+                                      "${AppConfig.localBaseUrl}/api/verifyOtp",
+                                    ),
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: jsonEncode(payload),
+                                  );
+
+                                  final jsonResponse = jsonDecode(
+                                    response.body,
+                                  );
+
+                                  if (response.statusCode == 200 &&
+                                      jsonResponse['status']['code'] == 200) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "OTP verified successfully. Waiting for admin approval...",
+                                        ),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+
+                                    // ⏳ Wait so user can read the message
+                                    await Future.delayed(
+                                      const Duration(seconds: 2),
+                                    );
+                                    // ✅ Navigate and pass all selected sessions
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => GetStartedPage(
+                                          // 👈 pass the full list
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    _showError(
+                                      jsonResponse['status']['message'] ??
+                                          'Invalid OTP, please try again',
+                                    );
+                                  }
+                                } catch (e) {
+                                  _showError('Network error: $e');
+                                }
+
+                                setState(() => _isLoading = false);
+                              }
+                            : null,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                "sign_in".tr(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
+                ),
         ),
       ),
     );
@@ -1170,17 +1142,16 @@ class _StalinAnimationScreenState extends State<StalinAnimationScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:
-                (_) => MainTabPage(
-                  username: widget.username,
-                  companyId: widget.companyId,
-                  companyName: widget.companies.first,
-                  subCustomerId: widget.subCustomerId,
-                  phoneNumber: widget.phoneNumber,
-                  loginSessions: widget.loginSessions,
-                  isDriver: widget.isDriver,
-                  isFsCustomer: widget.isFsCustomer, // ✅ Add this
-                ),
+            builder: (_) => MainTabPage(
+              username: widget.username,
+              companyId: widget.companyId,
+              companyName: widget.companies.first,
+              subCustomerId: widget.subCustomerId,
+              phoneNumber: widget.phoneNumber,
+              loginSessions: widget.loginSessions,
+              isDriver: widget.isDriver,
+              isFsCustomer: widget.isFsCustomer, // ✅ Add this
+            ),
           ),
         );
       }
@@ -1254,16 +1225,15 @@ class _FsAnimationScreenState extends State<FsAnimationScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder:
-            (_) => SelectCompanyPage(
-              username: widget.username,
-              companies: widget.companies,
-              phoneNumber: widget.phoneNumber,
-              subCustomerId: widget.subCustomerId,
-              loginSessions: widget.loginSessions!,
-              isDriver: widget.isDriver,
-              isFsCustomer: widget.isFsCustomer,
-            ),
+        builder: (_) => SelectCompanyPage(
+          username: widget.username,
+          companies: widget.companies,
+          phoneNumber: widget.phoneNumber,
+          subCustomerId: widget.subCustomerId,
+          loginSessions: widget.loginSessions!,
+          isDriver: widget.isDriver,
+          isFsCustomer: widget.isFsCustomer,
+        ),
       ),
     );
   }
@@ -1355,17 +1325,15 @@ class _SelectCompanyPageState extends State<SelectCompanyPage> {
                     borderSide: BorderSide(color: Colors.grey),
                   ),
                 ),
-                items:
-                    widget.companies.map((c) {
-                      return DropdownMenuItem(
-                        value: c["companyId"],
-                        child: Text(
-                          c["companyName"] ?? '',
-                          overflow:
-                              TextOverflow.ellipsis, // 🔥 Prevent overflow
-                        ),
-                      );
-                    }).toList(),
+                items: widget.companies.map((c) {
+                  return DropdownMenuItem(
+                    value: c["companyId"],
+                    child: Text(
+                      c["companyName"] ?? '',
+                      overflow: TextOverflow.ellipsis, // 🔥 Prevent overflow
+                    ),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   setState(() => selectedCompanyId = value);
                 },
@@ -1374,31 +1342,29 @@ class _SelectCompanyPageState extends State<SelectCompanyPage> {
 
             const SizedBox(height: 80),
             ElevatedButton(
-              onPressed:
-                  selectedCompanyId == null
-                      ? null
-                      : () {
-                        final selectedCompany = widget.companies.firstWhere(
-                          (c) => c["companyId"] == selectedCompanyId,
-                        );
+              onPressed: selectedCompanyId == null
+                  ? null
+                  : () {
+                      final selectedCompany = widget.companies.firstWhere(
+                        (c) => c["companyId"] == selectedCompanyId,
+                      );
 
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => MainTabPage(
-                                  username: widget.username,
-                                  companyId: selectedCompanyId!,
-                                  companyName: selectedCompany["companyName"]!,
-                                  subCustomerId: widget.subCustomerId,
-                                  phoneNumber: widget.phoneNumber,
-                                  loginSessions: widget.loginSessions,
-                                  isDriver: widget.isDriver,
-                                  isFsCustomer: widget.isFsCustomer,
-                                ),
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MainTabPage(
+                            username: widget.username,
+                            companyId: selectedCompanyId!,
+                            companyName: selectedCompany["companyName"]!,
+                            subCustomerId: widget.subCustomerId,
+                            phoneNumber: widget.phoneNumber,
+                            loginSessions: widget.loginSessions,
+                            isDriver: widget.isDriver,
+                            isFsCustomer: widget.isFsCustomer,
                           ),
-                        );
-                      },
+                        ),
+                      );
+                    },
               child: Text("continue").tr(),
             ),
           ],
@@ -1444,6 +1410,7 @@ class _MainTabPageState extends State<MainTabPage> {
   String? _displayName;
   String? _driverId; // 👈 store fetched driverId
   Set<String> _roles = {};
+  Set<String> _inventoryRoles = {};
 
   @override
   void initState() {
@@ -1472,7 +1439,9 @@ class _MainTabPageState extends State<MainTabPage> {
   Future<void> _fetchDriverDetails(String phoneNumber) async {
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.localBaseUrl}/api/getMobileDriverById/$phoneNumber'),
+        Uri.parse(
+          '${AppConfig.localBaseUrl}/api/getMobileDriverById/$phoneNumber',
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -1544,10 +1513,9 @@ class _MainTabPageState extends State<MainTabPage> {
               customerData['loginSession'] as List<dynamic>? ?? [];
 
           // ✅ Extract first company name (you can change logic if needed)
-          final firstCompanyName =
-              loginSessions.isNotEmpty
-                  ? loginSessions.first['companyName'] ?? ''
-                  : '';
+          final firstCompanyName = loginSessions.isNotEmpty
+              ? loginSessions.first['companyName'] ?? ''
+              : '';
 
           // ✅ Extract all sub-customer names as comma-separated list
           final subCustomerNames = loginSessions
@@ -1577,7 +1545,9 @@ class _MainTabPageState extends State<MainTabPage> {
   Future<void> _fetchCustomerFsDetails(String phoneNumber) async {
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.localBaseUrl}/api/getCustomerFsById/$phoneNumber'),
+        Uri.parse(
+          '${AppConfig.localBaseUrl}/api/getCustomerFsById/$phoneNumber',
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -1594,8 +1564,9 @@ class _MainTabPageState extends State<MainTabPage> {
             orElse: () => null,
           );
 
-          final selectedCompanyName =
-              selectedCompany != null ? selectedCompany['companyName'] : '';
+          final selectedCompanyName = selectedCompany != null
+              ? selectedCompany['companyName']
+              : '';
 
           // // ✅ Extract all sub-customer names as comma-separated list
           // final subCustomerNames = loginSessions
@@ -1606,12 +1577,20 @@ class _MainTabPageState extends State<MainTabPage> {
           //     .join(', ');
           final roleString = customerData['role'] ?? '';
 
-          _roles =
-              roleString
-                  .toString()
-                  .split(',')
-                  .map<String>((e) => e.trim())
-                  .toSet();
+          _roles = roleString
+              .toString()
+              .split(',')
+              .map<String>((e) => e.trim())
+              .toSet();
+
+          final inventoryRoleString =
+              customerData['inventoryRole']?.toString() ?? '';
+
+          _inventoryRoles = inventoryRoleString
+              .split(',')
+              .map<String>((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toSet();
 
           setState(() {
             _customerDetails = {
@@ -1766,7 +1745,12 @@ class _MainTabPageState extends State<MainTabPage> {
 
     // ✅ INVENTORY
     if (_roles.contains("Inventory")) {
-      _pages.add(InventoryPage(companyId: widget.companyId));
+      _pages.add(
+        InventoryPage(
+          companyId: widget.companyId,
+          inventoryRoles: _inventoryRoles,
+        ),
+      );
       _navItems.add(
         BottomNavigationBarItem(
           icon: Icon(Icons.inventory),
@@ -1868,52 +1852,51 @@ class _MainTabPageState extends State<MainTabPage> {
             onPressed: () {
               showDialog(
                 context: context,
-                builder:
-                    (_) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                builder: (_) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    "for_more".tr(),
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.support_agent_rounded,
+                        color: Colors.indigoAccent,
+                        size: 48,
                       ),
-                      title: Text(
-                        "for_more".tr(),
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.support_agent_rounded,
-                            color: Colors.indigoAccent,
-                            size: 48,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            "customer_support".tr(),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            '+91 73050 46337',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Color(0xFFF15F28),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          child: Text(
-                            "close".tr(),
-                            style: TextStyle(color: Color(0xFF010440)),
-                          ),
-                          onPressed: () => Navigator.of(context).pop(),
+                      SizedBox(height: 10),
+                      Text(
+                        "customer_support".tr(),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        '+91 73050 46337',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFFF15F28),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      child: Text(
+                        "close".tr(),
+                        style: TextStyle(color: Color(0xFF010440)),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
+                  ],
+                ),
               );
             },
           ),
@@ -2040,12 +2023,12 @@ class _MainTabPageState extends State<MainTabPage> {
                           Text(
                             item.label!,
                             style: TextStyle(
-                              color:
-                                  isSelected ? Color(0xFFF15F28) : Colors.grey,
-                              fontWeight:
-                                  isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
+                              color: isSelected
+                                  ? Color(0xFFF15F28)
+                                  : Colors.grey,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               fontSize: 10,
                             ),
                           ),
