@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:multi_select_flutter/chip_display/multi_select_chip_display.dart';
 import 'package:multi_select_flutter/dialog/multi_select_dialog_field.dart';
 import 'package:multi_select_flutter/util/multi_select_item.dart';
+import 'dart:convert';
+
+import 'package:foodswing_flutter/config_loader.dart';
+import 'package:http/http.dart' as http;
 
 class PurchaseRequestCreatePage extends StatefulWidget {
   final String companyId;
@@ -14,13 +18,19 @@ class PurchaseRequestCreatePage extends StatefulWidget {
 }
 
 class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
-  List<String> selectedKitchens = [];
+  // List<String> selectedKitchens = [];
+  List<Map<String, dynamic>> kitchens = [];
 
-  final List<String> kitchens = [
-    "Central Kitchen",
-    "Outlet Kitchen",
-    "Bakery Kitchen",
-  ];
+  Map<String, dynamic>? selectedKitchen;
+  List<Map<String, dynamic>> availableIngredients = [];
+
+  List<Map<String, dynamic>> selectedIngredients = [];
+
+  // final List<String> kitchens = [
+  //   "Central Kitchen",
+  //   "Outlet Kitchen",
+  //   "Bakery Kitchen",
+  // ];
 
   List<String> selectedMeals = [];
 
@@ -64,10 +74,125 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
     },
   ];
 
+  Future<void> loadKitchens() async {
+    final response = await http.get(
+      Uri.parse(
+        "${AppConfig.apiBaseUrl}/api/kitchenByCompany/${widget.companyId}",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      setState(() {
+        kitchens = List<Map<String, dynamic>>.from(json["data"]);
+      });
+    }
+  }
+
+  Future<void> loadIngredients() async {
+    if (selectedKitchen == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Select Kitchen")));
+      return;
+    }
+
+    final kitchenId = selectedKitchen!["id"];
+
+    final response = await http.get(
+      Uri.parse(
+        "${AppConfig.apiBaseUrl}/api/kitchens/ingredients/dropdown/$kitchenId",
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      setState(() {
+        availableIngredients = List<Map<String, dynamic>>.from(json);
+      });
+
+      openIngredientBottomSheet();
+    }
+  }
+
+  void openIngredientBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+
+      builder: (_) {
+        return SizedBox(
+          height: 600,
+
+          child: Column(
+            children: [
+              const SizedBox(height: 15),
+
+              const Text(
+                "Select Ingredient",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+
+              Expanded(
+                child: ListView.builder(
+                  itemCount: availableIngredients.length,
+
+                  itemBuilder: (_, index) {
+                    final item = availableIngredients[index];
+
+                    return ListTile(
+                      title: Text(item["ingredientName"]),
+
+                      subtitle: Text(item["displayLabel"]),
+
+                      trailing: Text("₹${item["estimatedUnitPrice"]}"),
+
+                      onTap: () {
+                        Navigator.pop(context);
+
+                        addIngredient(item);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void addIngredient(Map<String, dynamic> ingredient) {
+    if (selectedIngredients.any(
+      (e) => e["ingredientId"] == ingredient["ingredientId"],
+    )) {
+      return;
+    }
+
+    setState(() {
+      selectedIngredients.add({
+        "ingredientId": ingredient["ingredientId"],
+
+        "name": ingredient["ingredientName"],
+
+        "qty": 1,
+
+        "rate": ingredient["estimatedUnitPrice"],
+
+        "uom": ingredient["uomName"],
+
+        "stock": ingredient["netAvailableStock"],
+      });
+    });
+  }
+
   double get totalAmount {
     double total = 0;
 
-    for (var item in items) {
+    for (var item in selectedIngredients) {
       total += item["qty"] * item["rate"];
     }
 
@@ -83,6 +208,8 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
 
     toDateController.text =
         "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+
+    loadKitchens();
   }
 
   Future<void> _pickDate(bool isFromDate) async {
@@ -217,30 +344,27 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                   Row(
                     children: [
                       Expanded(
-                        child: MultiSelectDialogField<String>(
-                          items: kitchens
-                              .map((e) => MultiSelectItem<String>(e, e))
-                              .toList(),
-                          title: const Text("Kitchen"),
-                          buttonText: Text(
-                            selectedKitchens.isEmpty
-                                ? "Kitchen"
-                                : selectedKitchens.length == 1
-                                ? selectedKitchens.first
-                                : "${selectedKitchens.first} +${selectedKitchens.length - 1}",
+                        child: DropdownButtonFormField<Map<String, dynamic>>(
+                          value: selectedKitchen,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: "Kitchen",
+                            prefixIcon: const Icon(Icons.restaurant),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
                           ),
-                          searchable: true,
-                          initialValue: selectedKitchens,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(18),
-                            color: Colors.white,
-                          ),
-                          buttonIcon: const Icon(Icons.restaurant),
-                          chipDisplay: MultiSelectChipDisplay.none(),
-                          onConfirm: (values) {
+                          items: kitchens.map((kitchen) {
+                            return DropdownMenuItem<Map<String, dynamic>>(
+                              value: kitchen,
+                              child: Text(kitchen["name"]),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
                             setState(() {
-                              selectedKitchens = values;
+                              selectedKitchen = value;
                             });
                           },
                         ),
@@ -280,39 +404,39 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     ],
                   ),
 
-                  const SizedBox(height: 15),
-
-                  /// CATEGORY
-                  DropdownButtonFormField<String>(
-                    value: category,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: "Category",
-                      prefixIcon: const Icon(Icons.category_outlined),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Non Perishable",
-                        child: Text("Non Perishable"),
-                      ),
-                      DropdownMenuItem(
-                        value: "Perishable",
-                        child: Text("Perishable"),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      setState(() => category = v!);
-                    },
-                  ),
+                  //       const SizedBox(height: 15),
+                  //
+                  //       /// CATEGORY
+                  //       DropdownButtonFormField<String>(
+                  //         value: category,
+                  //         isExpanded: true,
+                  //         decoration: InputDecoration(
+                  //           labelText: "Category",
+                  //           prefixIcon: const Icon(Icons.category_outlined),
+                  //           filled: true,
+                  //           fillColor: Colors.white,
+                  //           border: OutlineInputBorder(
+                  //             borderRadius: BorderRadius.circular(18),
+                  //           ),
+                  //           enabledBorder: OutlineInputBorder(
+                  //             borderRadius: BorderRadius.circular(18),
+                  //             borderSide: BorderSide(color: Colors.grey.shade300),
+                  //           ),
+                  //         ),
+                  //         items: const [
+                  //           DropdownMenuItem(
+                  //             value: "Non Perishable",
+                  //             child: Text("Non Perishable"),
+                  //           ),
+                  //           DropdownMenuItem(
+                  //             value: "Perishable",
+                  //             child: Text("Perishable"),
+                  //           ),
+                  //         ],
+                  //         onChanged: (v) {
+                  //           setState(() => category = v!);
+                  //         },
+                  //       ),
                 ],
               ),
             ),
@@ -332,9 +456,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     shape: const CircleBorder(),
                     padding: const EdgeInsets.all(8),
                   ),
-                  onPressed: () {
-                    // Open Add Item Screen
-                  },
+                  onPressed: loadIngredients,
                   child: const Icon(Icons.add, color: Colors.white),
                 ),
               ],
@@ -345,9 +467,9 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
               height: 250,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: items.length,
+                itemCount: selectedIngredients.length,
                 itemBuilder: (context, index) {
-                  final item = items[index];
+                  final item = selectedIngredients[index];
 
                   return Container(
                     width: 210,

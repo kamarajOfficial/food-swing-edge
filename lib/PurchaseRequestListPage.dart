@@ -749,8 +749,8 @@ class _PurchaseRequestDetailsPageState
       "ingredients": ingredients,
     };
 
-    final response = await http.post(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/savePurchaseRequest"),
+    final response = await http.put(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/updatePurchaseRequest"),
 
       headers: {"Content-Type": "application/json"},
 

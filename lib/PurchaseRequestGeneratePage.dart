@@ -31,7 +31,7 @@ class _PurchaseRequestGeneratePageState
   String category = "Non Perishable";
   final TextEditingController fromDateController = TextEditingController();
   final TextEditingController toDateController = TextEditingController();
-  List<Map<String,dynamic>> ingredientMaster = [];
+  List<Map<String, dynamic>> ingredientMaster = [];
 
   DateTime selectedDate = DateTime.now();
 
@@ -50,30 +50,6 @@ class _PurchaseRequestGeneratePageState
 
     loadMeals();
     loadKitchens();
-    loadIngredientMaster();
-  }
-
-  Future<void> loadIngredientMaster() async {
-
-    final response = await http.get(
-      Uri.parse(
-        "${AppConfig.apiBaseUrl}/api/ingredientAllGet/list",
-      ),
-    );
-
-    if(response.statusCode==200){
-
-      final json=jsonDecode(response.body);
-
-      setState((){
-
-        ingredientMaster=
-        List<Map<String,dynamic>>.from(json["data"]);
-
-      });
-
-    }
-
   }
 
   Future<void> loadKitchens() async {
@@ -147,17 +123,17 @@ class _PurchaseRequestGeneratePageState
 
   Future<void> previewPurchaseRequest() async {
     if (selectedMeals.isEmpty || selectedKitchens.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Select Kitchen and Meal")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Select Kitchen and Meal")));
       return;
     }
 
-    final mealIds =
-    selectedMeals.map((e) => e["id"].toString()).join(",");
+    final mealIds = selectedMeals.map((e) => e["id"].toString()).join(",");
 
-    final kitchenIds =
-    selectedKitchens.map((e) => e["id"].toString()).join(",");
+    final kitchenIds = selectedKitchens
+        .map((e) => e["id"].toString())
+        .join(",");
 
     final response = await http.get(
       Uri.parse(
@@ -176,13 +152,14 @@ class _PurchaseRequestGeneratePageState
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PurchaseRequestPreviewPage(
-            ingredients: List<Map<String, dynamic>>.from(json["data"]),
-            fromDate: fromDateController.text,
-            toDate: toDateController.text,
-            mealIds: mealIds,
-            kitchenIds: kitchenIds,
-          ),
+          builder: (_) =>
+              PurchaseRequestPreviewPage(
+                ingredients: List<Map<String, dynamic>>.from(json["data"]),
+                fromDate: fromDateController.text,
+                toDate: toDateController.text,
+                mealIds: mealIds,
+                kitchenIds: kitchenIds,
+              ),
         ),
       );
     }
@@ -205,6 +182,7 @@ class _PurchaseRequestGeneratePageState
               "${d.month.toString().padLeft(2, '0')}-"
               "${d.day.toString().padLeft(2, '0')}";
         }
+
         if (isFromDate) {
           fromDateController.text = formatApiDate(picked);
         } else {
@@ -335,11 +313,12 @@ class _PurchaseRequestGeneratePageState
                   child: MultiSelectDialogField<Map<String, dynamic>>(
                     items: kitchens
                         .map(
-                          (e) => MultiSelectItem<Map<String, dynamic>>(
+                          (e) =>
+                          MultiSelectItem<Map<String, dynamic>>(
                             e,
                             e["name"],
                           ),
-                        )
+                    )
                         .toList(),
                     title: const Text("Kitchen"),
                     buttonText: Text(
@@ -347,7 +326,8 @@ class _PurchaseRequestGeneratePageState
                           ? "Kitchen"
                           : selectedKitchens.length == 1
                           ? selectedKitchens.first["name"]
-                          : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
+                          : "${selectedKitchens
+                          .first["name"]} +${selectedKitchens.length - 1}",
                     ),
                     searchable: true,
                     initialValue: selectedKitchens,
@@ -371,11 +351,12 @@ class _PurchaseRequestGeneratePageState
                   child: MultiSelectDialogField<Map<String, dynamic>>(
                     items: meals
                         .map(
-                          (e) => MultiSelectItem<Map<String, dynamic>>(
+                          (e) =>
+                          MultiSelectItem<Map<String, dynamic>>(
                             e,
                             e["name"],
                           ),
-                        )
+                    )
                         .toList(),
                     title: const Text("Meal"),
 
@@ -384,7 +365,8 @@ class _PurchaseRequestGeneratePageState
                           ? "Meal"
                           : selectedMeals.length == 1
                           ? selectedMeals.first["name"]
-                          : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
+                          : "${selectedMeals.first["name"]} +${selectedMeals
+                          .length - 1}",
                     ),
                     searchable: true,
                     initialValue: selectedMeals,
@@ -453,6 +435,8 @@ class _PurchaseRequestPreviewPageState
     extends State<PurchaseRequestPreviewPage> {
   List<Map<String, dynamic>> ingredients = [];
   List<Map<String, dynamic>> ingredientMaster = [];
+  late Map<String, Map<String, dynamic>> ingredientMap;
+  late List<DropdownMenuItem<Map<String, dynamic>>> ingredientItems;
 
   @override
   void initState() {
@@ -470,8 +454,23 @@ class _PurchaseRequestPreviewPageState
       final json = jsonDecode(response.body);
 
       setState(() {
-        ingredientMaster =
-        List<Map<String, dynamic>>.from(json["data"]);
+        ingredientMaster = List<Map<String, dynamic>>.from(json["data"]);
+
+        ingredientMap = {
+          for (var e in ingredientMaster)
+            e["id"].toString(): e,
+        };
+
+        ingredientItems = ingredientMaster.map((ingredient) {
+          return DropdownMenuItem<Map<String, dynamic>>(
+            value: ingredient,
+            child: Text(
+              ingredient["name"],
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          );
+        }).toList();
       });
     }
   }
@@ -479,8 +478,7 @@ class _PurchaseRequestPreviewPageState
   double get totalQty {
     return ingredients.fold(
       0,
-          (sum, item) =>
-      sum + ((item["quantity"] ?? 0) as num).toDouble(),
+          (sum, item) => sum + ((item["quantity"] ?? 0) as num).toDouble(),
     );
   }
 
@@ -495,27 +493,32 @@ class _PurchaseRequestPreviewPageState
   }
 
   Future<void> savePurchaseRequest() async {
-    final body = {
-      "fromDate": widget.fromDate,
-      "toDate": widget.toDate,
-      "mealIds": widget.mealIds.split(",").map(int.parse).toList(),
-      "kitchenIds": widget.kitchenIds.split(",").map(int.parse).toList(),
-      "ingredients": ingredients
-          .map((e) => {
-        "ingredientId": e["ingredientId"],
-        "quantity": e["quantity"]
-      })
-          .toList()
-    };
+    final url =
+        "${AppConfig.apiBaseUrl}/api/savePurchaseRequest/"
+        "${widget.fromDate}/"
+        "${widget.toDate}/"
+        "${widget.mealIds}/"
+        "${widget.kitchenIds}";
 
+    final body = ingredients.map((e) =>
+    {
+      "ingredientId": e["ingredientId"],
+      "quantity": e["quantity"],
+    }).toList();
+
+    print(url);
     print(jsonEncode(body));
 
-    /// Replace with your save API
     final response = await http.post(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/savePurchaseRequest"),
-      headers: {"Content-Type": "application/json"},
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: jsonEncode(body),
     );
+
+    print("Status : ${response.statusCode}");
+    print("Response : ${response.body}");
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -527,10 +530,55 @@ class _PurchaseRequestPreviewPageState
       Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to save PR")),
+        SnackBar(content: Text(response.body)),
       );
     }
   }
+
+  // Future<void> savePurchaseRequest() async {
+  //   final body = {
+  //     "fromDate": widget.fromDate,
+  //     "toDate": widget.toDate,
+  //     "mealIds": widget.mealIds.split(",").map(int.parse).toList(),
+  //     "kitchenIds": widget.kitchenIds.split(",").map(int.parse).toList(),
+  //     "ingredients": ingredients
+  //         .map(
+  //           (e) => {
+  //             "ingredientId": e["ingredientId"],
+  //             "quantity": e["quantity"],
+  //           },
+  //         )
+  //         .toList(),
+  //   };
+  //
+  //   print(jsonEncode(body));
+  //
+  //   /// Replace with your save API
+  //   final response = await http.post(
+  //     Uri.parse("${AppConfig.apiBaseUrl}/api/savePurchaseRequest"),
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: jsonEncode(body),
+  //   );
+  //
+  //   print("Status Code : ${response.statusCode}");
+  //   print("Response : ${response.body}");
+  //
+  //   if (response.statusCode == 200) {
+  //     final json = jsonDecode(response.body);
+  //
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+  //
+  //     Navigator.pop(context, true);
+  //   } else {
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text("Failed to save PR")));
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -549,180 +597,81 @@ class _PurchaseRequestPreviewPageState
             child: Padding(
               padding: const EdgeInsets.all(15),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  summary("Items", ingredients.length.toString()),
-                  summary("Qty", totalQty.toStringAsFixed(2)),
-                  summary("Amount",
-                      "₹${totalAmount.toStringAsFixed(2)}"),
+                  Expanded(
+                    child: summary(
+                      "Items",
+                      ingredients.length.toString(),
+                    ),
+                  ),
+                  Expanded(
+                    child: summary("Qty", totalQty.toStringAsFixed(2)),
+                  ),
+                  Expanded(
+                    child: summary(
+                      "Amount",
+                      "₹${totalAmount.toStringAsFixed(2)}",
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 8,
-                horizontalMargin: 6,
-                dataRowMinHeight: 40,
-                dataRowMaxHeight: 40,
-                headingRowHeight: 36,
-                headingRowColor:
-                WidgetStateProperty.all(const Color(0xFFF15F28)),
-                headingTextStyle: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-                dataTextStyle: const TextStyle(fontSize: 11),
-                columns: const [
-                  DataColumn(label: Text("Ingredient")),
-                  DataColumn(label: Text("Qty")),
-                  DataColumn(label: Text("Rate")),
-                  DataColumn(label: Text("Cost")),
-                  DataColumn(label: Text("")),
-                ],
-                rows: ingredients.map((item) {
-
-                  Map<String, dynamic>? selectedIngredient;
-
-                  try {
-                    selectedIngredient = ingredientMaster.firstWhere(
-                          (e) => e["id"].toString() == item["ingredientId"].toString(),
-                    );
-                  } catch (_) {
-                    selectedIngredient = null;
-                  }
-
-                  return DataRow(
-                    cells: [
-                      /// Ingredient
-                      DataCell(
-                        SizedBox(
-                          width: 170,
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<Map<String, dynamic>>(
-                              isExpanded: true,
-                              iconSize: 18,
-                              value: selectedIngredient,
-                              hint: Text(
-                                "${item["ingredientName"]}",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                              items: ingredientMaster.map((ingredient) {
-                                return DropdownMenuItem<Map<String, dynamic>>(
-                                  value: ingredient,
-                                  child: SizedBox(
-                                    width: 170,
-                                    child: Text(
-                                      ingredient["name"],
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (selected) {
-                                if (selected == null) return;
-
-                                setState(() {
-                                  item["ingredientId"] = selected["id"];
-
-                                  final name =
-                                      selected["name"]?.toString() ?? "";
-
-                                  final parts = name.split(" - ");
-
-                                  item["ingredientName"] = parts.first;
-                                  item["erpId"] =
-                                  parts.length > 1 ? parts.last : "";
-
-                                  item["unitRate"] =
-                                      (selected["cost"] as num?)?.toDouble() ??
-                                          0;
-
-                                  item["name"] = selected["uomName"];
-                                });
-                              },
-                            ),
-                          ),
+            child: Column(
+              children: [
+                Container(
+                  color: const Color(0xFFF15F28),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
+                  child: const Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          "Ingredient",
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
-
-                      /// Qty
-                      DataCell(
-                        SizedBox(
-                          width: 55,
-                          child: TextFormField(
-                            initialValue: item["quantity"].toString(),
-                            style: const TextStyle(fontSize: 11),
-                            textAlign: TextAlign.center,
-                            keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 6),
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                item["quantity"] =
-                                    double.tryParse(value) ?? 0;
-                              });
-                            },
-                          ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          "Qty",
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
-
-                      /// Rate
-                      DataCell(
-                        SizedBox(
-                          width: 55,
-                          child: Text(
-                            "₹${(item["unitRate"] as num).toStringAsFixed(0)}",
-                            style: const TextStyle(fontSize: 11),
-                          ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          "Rate",
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
-
-                      /// Cost
-                      DataCell(
-                        SizedBox(
-                          width: 65,
-                          child: Text(
-                            "₹${(((item["quantity"] ?? 0) as num).toDouble() * ((item["unitRate"] ?? 0) as num).toDouble()).toStringAsFixed(0)}",
-                            style: const TextStyle(fontSize: 11),
-                          ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          "Cost",
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
-
-                      /// Delete
-                      DataCell(
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          iconSize: 18,
-                          splashRadius: 18,
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              ingredients.remove(item);
-                            });
-                          },
-                        ),
-                      ),
+                      Expanded(flex: 1, child: SizedBox()),
                     ],
-                  );
-                }).toList(),
-              ),
+                  ),
+                ),
+
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: ingredients.length,
+                    itemExtent: 72,
+                    cacheExtent: 300,
+                    itemBuilder: (context, index) {
+                      return ingredientRow(index);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -742,7 +691,134 @@ class _PurchaseRequestPreviewPageState
                 ),
               ),
             ),
-          )
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget ingredientRow(int index) {
+    final item = ingredients[index];
+
+    Map<String, dynamic>? selectedIngredient;
+
+    try {
+      selectedIngredient = ingredientMap[item["ingredientId"].toString()];
+    } catch (_) {}
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: InkWell(
+              onTap: () => _selectIngredient(index),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item["ingredientName"] ?? "Select Ingredient",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Expanded(
+            flex: 2,
+            child: InkWell(
+              onTap: () async {
+                final controller = TextEditingController(
+                  text: item["quantity"].toString(),
+                );
+
+                final value = await showDialog<String>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("Enter Quantity"),
+                      content: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context, controller.text);
+                          },
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (value != null) {
+                  setState(() {
+                    item["quantity"] = double.tryParse(value) ?? 0;
+                  });
+                }
+              },
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  item["quantity"].toString(),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text("₹${item["unitRate"]}", textAlign: TextAlign.center),
+          ),
+
+          Expanded(
+            flex: 2,
+            child: Text(
+              "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0))
+                  .toStringAsFixed(0)}",
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+          SizedBox(
+            width: 36,
+            child: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                setState(() {
+                  ingredients.removeAt(index);
+                });
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -753,12 +829,69 @@ class _PurchaseRequestPreviewPageState
       children: [
         Text(
           value,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         const SizedBox(height: 5),
         Text(title),
       ],
+    );
+  }
+
+  void _selectIngredient(int rowIndex) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return SizedBox(
+          height: MediaQuery
+              .of(context)
+              .size
+              .height * .75,
+          child: Column(
+            children: [
+
+              const SizedBox(height: 12),
+
+              const Text(
+                "Select Ingredient",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const Divider(),
+
+              Expanded(
+                child: ListView.builder(
+                  itemCount: ingredientMaster.length,
+                  itemBuilder: (_, i) {
+                    final ingredient = ingredientMaster[i];
+
+                    return ListTile(
+                      title: Text(ingredient["name"]),
+                      onTap: () {
+                        setState(() {
+                          ingredients[rowIndex]["ingredientId"] =
+                          ingredient["id"];
+
+                          ingredients[rowIndex]["ingredientName"] =
+                          ingredient["name"];
+
+                          ingredients[rowIndex]["unitRate"] =
+                              (ingredient["cost"] as num?)?.toDouble() ?? 0;
+                        });
+
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
