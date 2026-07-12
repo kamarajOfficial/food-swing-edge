@@ -25,6 +25,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
   List<Map<String, dynamic>> availableIngredients = [];
 
   List<Map<String, dynamic>> selectedIngredients = [];
+  int? createdPrId;
 
   // final List<String> kitchens = [
   //   "Central Kitchen",
@@ -105,13 +106,17 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
         "${AppConfig.apiBaseUrl}/api/kitchens/ingredients/dropdown/$kitchenId",
       ),
     );
+    print(response.statusCode);
+    print(response.body);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
       setState(() {
-        availableIngredients = List<Map<String, dynamic>>.from(json);
+        availableIngredients = List<Map<String, dynamic>>.from(json["data"]);
       });
+
+      print("Ingredients Count : ${availableIngredients.length}");
 
       openIngredientBottomSheet();
     }
@@ -121,45 +126,265 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-
+      backgroundColor: Colors.transparent,
       builder: (_) {
-        return SizedBox(
-          height: 600,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                List<Map<String, dynamic>> filteredIngredients =
+                List.from(availableIngredients);
 
-          child: Column(
-            children: [
-              const SizedBox(height: 15),
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xfff8f9fd),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
 
-              const Text(
-                "Select Ingredient",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+                      Container(
+                        width: 60,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
 
-              Expanded(
-                child: ListView.builder(
-                  itemCount: availableIngredients.length,
+                      const SizedBox(height: 15),
 
-                  itemBuilder: (_, index) {
-                    final item = availableIngredients[index];
+                      const Text(
+                        "Select Ingredient",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
 
-                    return ListTile(
-                      title: Text(item["ingredientName"]),
+                      const SizedBox(height: 15),
 
-                      subtitle: Text(item["displayLabel"]),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: "Search ingredient...",
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setSheetState(() {
+                              filteredIngredients = availableIngredients
+                                  .where(
+                                    (e) => e["ingredientName"]
+                                    .toString()
+                                    .toLowerCase()
+                                    .contains(value.toLowerCase()),
+                              )
+                                  .toList();
+                            });
+                          },
+                        ),
+                      ),
 
-                      trailing: Text("₹${item["estimatedUnitPrice"]}"),
+                      const SizedBox(height: 15),
 
-                      onTap: () {
-                        Navigator.pop(context);
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: filteredIngredients.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredIngredients[index];
 
-                        addIngredient(item);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+                            return Card(
+                              elevation: 2,
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 15,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(18),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  addIngredient(item);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        height: 55,
+                                        width: 55,
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade100,
+                                          borderRadius:
+                                          BorderRadius.circular(15),
+                                        ),
+                                        child: const Icon(
+                                          Icons.inventory_2,
+                                          color: Colors.orange,
+                                          size: 28,
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 15),
+
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item["ingredientName"],
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 5),
+
+                                            Text(
+                                              item["code"],
+                                              style: TextStyle(
+                                                color: Colors.grey.shade600,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 8),
+
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                    Colors.green.shade50,
+                                                    borderRadius:
+                                                    BorderRadius.circular(
+                                                        20),
+                                                  ),
+                                                  child: Text(
+                                                    "Stock ${item["netAvailableStock"]}",
+                                                    style: TextStyle(
+                                                      color:
+                                                      Colors.green.shade700,
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                      FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+
+                                                const SizedBox(width: 8),
+
+                                                Container(
+                                                  padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                    Colors.orange.shade50,
+                                                    borderRadius:
+                                                    BorderRadius.circular(
+                                                        20),
+                                                  ),
+                                                  child: Text(
+                                                    item["uomName"],
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            "₹${item["estimatedUnitPrice"]}",
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.deepOrange,
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 10),
+
+                                          Container(
+                                            padding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 7,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange,
+                                              borderRadius:
+                                              BorderRadius.circular(30),
+                                            ),
+                                            child: const Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.add,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  "ADD",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight:
+                                                    FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -197,6 +422,115 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
     }
 
     return total;
+  }
+
+  Future<void> submitPR() async {
+    if (createdPrId == null) {
+      await saveDraft();
+
+      if (createdPrId == null) {
+        return;
+      }
+    }
+
+    final body = {"remarks": remarksController.text, "actionBy": "PR"};
+
+    final response = await http.put(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/submit/$createdPrId"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
+    }
+  }
+
+  String formatApiDate(String value) {
+    final p = value.split("-");
+    return "${p[2]}-${p[1].padLeft(2, '0')}-${p[0].padLeft(2, '0')}";
+  }
+
+  Future<void> saveDraft() async {
+    if (selectedKitchen == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Select Kitchen")));
+      return;
+    }
+
+    if (selectedMeals.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Select Meal")));
+      return;
+    }
+
+    if (selectedIngredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Add at least one ingredient")),
+      );
+      return;
+    }
+
+    final body = {
+      "kitchenId": selectedKitchen!["id"],
+
+      // Replace with actual meal ids from your API
+      "mealIds": selectedMeals.map((e) => int.parse(e)).toList(),
+
+      "companyIds": [int.parse(widget.companyId)],
+
+      "fromDate": formatApiDate(fromDateController.text),
+      "toDate": formatApiDate(toDateController.text),
+      "requiredByDate": formatApiDate(toDateController.text),
+
+      "priority": "Medium",
+      "requestType": "Manual",
+      "source": "Production Plan",
+      "remarks": remarksController.text,
+      "actionBy": "PR",
+
+      "ingredients": selectedIngredients
+          .map((e) => {"ingredientId": e["ingredientId"], "quantity": e["qty"]})
+          .toList(),
+    };
+
+    print(jsonEncode(body));
+
+    final response = await http.post(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/createDraft"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final json = jsonDecode(response.body);
+
+      createdPrId = json["data"]["prId"];
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
+    }
   }
 
   @override
@@ -503,9 +837,10 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(10),
-                                    child: Image.network(
-                                      item["image"],
-                                      fit: BoxFit.contain,
+                                    child: const Icon(
+                                      Icons.inventory_2,
+                                      size: 40,
+                                      color: Colors.orange,
                                     ),
                                   ),
                                 ),
@@ -518,7 +853,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                                 child: InkWell(
                                   onTap: () {
                                     setState(() {
-                                      items.removeAt(index);
+                                      selectedIngredients.removeAt(index);
                                     });
                                   },
                                   child: Container(
@@ -660,7 +995,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Total Items : ${items.length}",
+                      "Total Items : ${selectedIngredients.length}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
 
@@ -683,7 +1018,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: saveDraft,
                     icon: const Icon(Icons.save),
                     label: const Text("Save Draft"),
                   ),
@@ -696,7 +1031,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                     ),
-                    onPressed: () {},
+                    onPressed: submitPR,
                     icon: const Icon(Icons.send),
                     label: const Text("Submit PR"),
                   ),

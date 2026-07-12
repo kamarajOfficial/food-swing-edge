@@ -3,15 +3,96 @@ import 'package:flutter/material.dart';
 import 'PurchaseRequestCreatePage.dart';
 import 'PurchaseRequestGeneratePage.dart';
 import 'PurchaseRequestListPage.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:foodswing_flutter/config_loader.dart';
 
-class PurchaseRequestPage extends StatelessWidget {
+class PurchaseRequestPage extends StatefulWidget {
   final String companyId;
 
   const PurchaseRequestPage({Key? key, required this.companyId})
     : super(key: key);
 
   @override
+  State<PurchaseRequestPage> createState() => _PurchaseRequestPageState();
+}
+
+class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
+  bool loading = true;
+
+  Map<String, dynamic> dashboard = {};
+
+  List<Map<String, dynamic>> recentPRs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadDashboard();
+  }
+
+  Future<void> loadDashboard() async {
+    final response = await http.get(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/dashboard"),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      setState(() {
+        dashboard = json["data"];
+        recentPRs = List<Map<String, dynamic>>.from(json["data"]["recentPRs"]);
+        loading = false;
+      });
+    } else {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  double get todayPRValue {
+    double total = 0;
+
+    final today = DateTime.now();
+
+    for (var pr in recentPRs) {
+      if (pr["estimatedAmount"] == null) continue;
+
+      final created = DateTime.parse(pr["createdAt"]);
+
+      if (created.year == today.year &&
+          created.month == today.month &&
+          created.day == today.day) {
+        total += (pr["estimatedAmount"] as num).toDouble();
+      }
+    }
+
+    return total;
+  }
+
+  double get monthlyPRValue {
+    double total = 0;
+
+    final today = DateTime.now();
+
+    for (var pr in recentPRs) {
+      if (pr["estimatedAmount"] == null) continue;
+
+      final created = DateTime.parse(pr["createdAt"]);
+
+      if (created.year == today.year && created.month == today.month) {
+        total += (pr["estimatedAmount"] as num).toDouble();
+      }
+    }
+
+    return total;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -49,13 +130,29 @@ class PurchaseRequestPage extends StatelessWidget {
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
               children: [
-                _statCard("Total PR", "28", Colors.blue),
+                _statCard(
+                  "Total PR",
+                  "${dashboard["totalPRs"] ?? 0}",
+                  Colors.blue,
+                ),
 
-                _statCard("Pending", "12", Colors.orange),
+                _statCard(
+                  "Draft",
+                  "${dashboard["draftCount"] ?? 0}",
+                  Colors.orange,
+                ),
 
-                _statCard("Approved", "10", Colors.green),
+                _statCard(
+                  "Approved",
+                  "${dashboard["approvedCount"] ?? 0}",
+                  Colors.green,
+                ),
 
-                _statCard("Rejected", "2", Colors.red),
+                _statCard(
+                  "Rejected",
+                  "${dashboard["rejectedCount"] ?? 0}",
+                  Colors.red,
+                ),
               ],
             ),
 
@@ -66,7 +163,7 @@ class PurchaseRequestPage extends StatelessWidget {
                 Expanded(
                   child: _valueCard(
                     "Today's PR Value",
-                    "₹2,45,000",
+                    "₹${todayPRValue.toStringAsFixed(2)}",
                     Colors.deepPurple,
                   ),
                 ),
@@ -76,7 +173,7 @@ class PurchaseRequestPage extends StatelessWidget {
                 Expanded(
                   child: _valueCard(
                     "Monthly PR Value",
-                    "₹18,75,000",
+                    "₹${monthlyPRValue.toStringAsFixed(2)}",
                     Colors.teal,
                   ),
                 ),
@@ -102,9 +199,9 @@ class PurchaseRequestPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) =>
-                              PurchaseRequestGeneratePage(companyId: companyId),
+                      builder: (_) => PurchaseRequestGeneratePage(
+                        companyId: widget.companyId,
+                      ),
                     ),
                   );
                 }),
@@ -113,9 +210,9 @@ class PurchaseRequestPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) =>
-                              PurchaseRequestCreatePage(companyId: companyId),
+                      builder: (_) => PurchaseRequestCreatePage(
+                        companyId: widget.companyId,
+                      ),
                     ),
                   );
                 }),
@@ -124,8 +221,8 @@ class PurchaseRequestPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) => PurchaseRequestListPage(companyId: companyId),
+                      builder: (_) =>
+                          PurchaseRequestListPage(companyId: widget.companyId),
                     ),
                   );
                 }),
@@ -218,7 +315,6 @@ class PurchaseRequestPage extends StatelessWidget {
             //     );
             //   },
             // ),
-
             const SizedBox(height: 80),
           ],
         ),

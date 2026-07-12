@@ -82,45 +82,6 @@ class _PurchaseRequestGeneratePageState
     }
   }
 
-  Future<void> generatePurchaseRequest() async {
-    if (selectedMeals.isEmpty || selectedKitchens.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Select Kitchen and Meal")));
-
-      return;
-    }
-
-    final mealIds = selectedMeals.map((e) => e["id"].toString()).join(",");
-
-    final kitchenIds = selectedKitchens
-        .map((e) => e["id"].toString())
-        .join(",");
-
-    final url =
-        "${AppConfig.apiBaseUrl}/api/savePurchaseRequest/"
-        "${fromDateController.text}/"
-        "${toDateController.text}/"
-        "$mealIds/"
-        "$kitchenIds";
-
-    print(url);
-
-    final response = await http.post(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to generate Purchase Request")),
-      );
-    }
-  }
-
   Future<void> previewPurchaseRequest() async {
     if (selectedMeals.isEmpty || selectedKitchens.isEmpty) {
       ScaffoldMessenger.of(
@@ -138,11 +99,11 @@ class _PurchaseRequestGeneratePageState
     final response = await http.get(
       Uri.parse(
         "${AppConfig.apiBaseUrl}"
-            "/api/projection/preparation/"
-            "${fromDateController.text}/"
-            "${toDateController.text}/"
-            "$mealIds/"
-            "$kitchenIds",
+        "/api/projection/preparation/"
+        "${fromDateController.text}/"
+        "${toDateController.text}/"
+        "$mealIds/"
+        "$kitchenIds",
       ),
     );
 
@@ -152,14 +113,14 @@ class _PurchaseRequestGeneratePageState
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              PurchaseRequestPreviewPage(
-                ingredients: List<Map<String, dynamic>>.from(json["data"]),
-                fromDate: fromDateController.text,
-                toDate: toDateController.text,
-                mealIds: mealIds,
-                kitchenIds: kitchenIds,
-              ),
+          builder: (_) => PurchaseRequestPreviewPage(
+            ingredients: List<Map<String, dynamic>>.from(json["data"]),
+            fromDate: fromDateController.text,
+            toDate: toDateController.text,
+            mealIds: mealIds,
+            kitchenIds: kitchenIds,
+            companyId: widget.companyId,
+          ),
         ),
       );
     }
@@ -313,12 +274,11 @@ class _PurchaseRequestGeneratePageState
                   child: MultiSelectDialogField<Map<String, dynamic>>(
                     items: kitchens
                         .map(
-                          (e) =>
-                          MultiSelectItem<Map<String, dynamic>>(
+                          (e) => MultiSelectItem<Map<String, dynamic>>(
                             e,
                             e["name"],
                           ),
-                    )
+                        )
                         .toList(),
                     title: const Text("Kitchen"),
                     buttonText: Text(
@@ -326,8 +286,7 @@ class _PurchaseRequestGeneratePageState
                           ? "Kitchen"
                           : selectedKitchens.length == 1
                           ? selectedKitchens.first["name"]
-                          : "${selectedKitchens
-                          .first["name"]} +${selectedKitchens.length - 1}",
+                          : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
                     ),
                     searchable: true,
                     initialValue: selectedKitchens,
@@ -351,12 +310,11 @@ class _PurchaseRequestGeneratePageState
                   child: MultiSelectDialogField<Map<String, dynamic>>(
                     items: meals
                         .map(
-                          (e) =>
-                          MultiSelectItem<Map<String, dynamic>>(
+                          (e) => MultiSelectItem<Map<String, dynamic>>(
                             e,
                             e["name"],
                           ),
-                    )
+                        )
                         .toList(),
                     title: const Text("Meal"),
 
@@ -365,8 +323,7 @@ class _PurchaseRequestGeneratePageState
                           ? "Meal"
                           : selectedMeals.length == 1
                           ? selectedMeals.first["name"]
-                          : "${selectedMeals.first["name"]} +${selectedMeals
-                          .length - 1}",
+                          : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
                     ),
                     searchable: true,
                     initialValue: selectedMeals,
@@ -416,6 +373,7 @@ class PurchaseRequestPreviewPage extends StatefulWidget {
   final String toDate;
   final String mealIds;
   final String kitchenIds;
+  final String companyId;
 
   const PurchaseRequestPreviewPage({
     Key? key,
@@ -424,6 +382,7 @@ class PurchaseRequestPreviewPage extends StatefulWidget {
     required this.toDate,
     required this.mealIds,
     required this.kitchenIds,
+    required this.companyId,
   }) : super(key: key);
 
   @override
@@ -456,10 +415,7 @@ class _PurchaseRequestPreviewPageState
       setState(() {
         ingredientMaster = List<Map<String, dynamic>>.from(json["data"]);
 
-        ingredientMap = {
-          for (var e in ingredientMaster)
-            e["id"].toString(): e,
-        };
+        ingredientMap = {for (var e in ingredientMaster) e["id"].toString(): e};
 
         ingredientItems = ingredientMaster.map((ingredient) {
           return DropdownMenuItem<Map<String, dynamic>>(
@@ -478,60 +434,70 @@ class _PurchaseRequestPreviewPageState
   double get totalQty {
     return ingredients.fold(
       0,
-          (sum, item) => sum + ((item["quantity"] ?? 0) as num).toDouble(),
+      (sum, item) => sum + ((item["quantity"] ?? 0) as num).toDouble(),
     );
   }
 
   double get totalAmount {
     return ingredients.fold(
       0,
-          (sum, item) =>
-      sum +
+      (sum, item) =>
+          sum +
           (((item["quantity"] ?? 0) as num).toDouble() *
               ((item["unitRate"] ?? 0) as num).toDouble()),
     );
   }
 
   Future<void> savePurchaseRequest() async {
-    final url =
-        "${AppConfig.apiBaseUrl}/api/savePurchaseRequest/"
-        "${widget.fromDate}/"
-        "${widget.toDate}/"
-        "${widget.mealIds}/"
-        "${widget.kitchenIds}";
+    final body = {
+      "kitchenId": int.parse(widget.kitchenIds),
 
-    final body = ingredients.map((e) =>
-    {
-      "ingredientId": e["ingredientId"],
-      "quantity": e["quantity"],
-    }).toList();
+      "mealIds": widget.mealIds.split(",").map((e) => int.parse(e)).toList(),
 
-    print(url);
+      "companyIds": [int.parse(widget.companyId)],
+
+      "fromDate": widget.fromDate,
+      "toDate": widget.toDate,
+      "requiredByDate": widget.toDate,
+      "priority": "Medium",
+      "requestType": "Manual",
+      "source": "Production Plan",
+      "remarks": "",
+      "actionBy": "PR",
+
+      "ingredients": ingredients
+          .map(
+            (e) => {
+              "ingredientId": e["ingredientId"],
+              "quantity": e["quantity"],
+            },
+          )
+          .toList(),
+    };
+
     print(jsonEncode(body));
 
     final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/createDraft"),
+      headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
 
-    print("Status : ${response.statusCode}");
-    print("Response : ${response.body}");
+    print(response.statusCode);
+    print(response.body);
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201 || response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(json["status"]["message"])),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
 
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.body)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
     }
   }
 
@@ -591,109 +557,109 @@ class _PurchaseRequestPreviewPageState
       body: ingredientMaster.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-          Card(
-            margin: const EdgeInsets.all(12),
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: summary(
-                      "Items",
-                      ingredients.length.toString(),
-                    ),
-                  ),
-                  Expanded(
-                    child: summary("Qty", totalQty.toStringAsFixed(2)),
-                  ),
-                  Expanded(
-                    child: summary(
-                      "Amount",
-                      "₹${totalAmount.toStringAsFixed(2)}",
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Column(
               children: [
-                Container(
-                  color: const Color(0xFFF15F28),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
+                Card(
+                  margin: const EdgeInsets.all(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(15),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: summary(
+                            "Items",
+                            ingredients.length.toString(),
+                          ),
+                        ),
+                        Expanded(
+                          child: summary("Qty", totalQty.toStringAsFixed(2)),
+                        ),
+                        Expanded(
+                          child: summary(
+                            "Amount",
+                            "₹${totalAmount.toStringAsFixed(2)}",
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Row(
+                ),
+                Expanded(
+                  child: Column(
                     children: [
-                      Expanded(
-                        flex: 4,
-                        child: Text(
-                          "Ingredient",
-                          style: TextStyle(color: Colors.white),
+                      Container(
+                        color: const Color(0xFFF15F28),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
+                        child: const Row(
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: Text(
+                                "Ingredient",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                "Qty",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                "Rate",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                "Cost",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            Expanded(flex: 1, child: SizedBox()),
+                          ],
                         ),
                       ),
+
                       Expanded(
-                        flex: 2,
-                        child: Text(
-                          "Qty",
-                          style: TextStyle(color: Colors.white),
+                        child: ListView.builder(
+                          itemCount: ingredients.length,
+                          itemExtent: 72,
+                          cacheExtent: 300,
+                          itemBuilder: (context, index) {
+                            return ingredientRow(index);
+                          },
                         ),
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          "Rate",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          "Cost",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      Expanded(flex: 1, child: SizedBox()),
                     ],
                   ),
                 ),
-
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: ingredients.length,
-                    itemExtent: 72,
-                    cacheExtent: 300,
-                    itemBuilder: (context, index) {
-                      return ingredientRow(index);
-                    },
+                Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF15F28),
+                      ),
+                      onPressed: savePurchaseRequest,
+                      icon: const Icon(Icons.save),
+                      label: const Text(
+                        "Save Purchase Request",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(15),
-            child: SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF15F28),
-                ),
-                onPressed: savePurchaseRequest,
-                icon: const Icon(Icons.save),
-                label: const Text(
-                  "Save Purchase Request",
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -802,8 +768,7 @@ class _PurchaseRequestPreviewPageState
           Expanded(
             flex: 2,
             child: Text(
-              "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0))
-                  .toStringAsFixed(0)}",
+              "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0)).toStringAsFixed(0)}",
               textAlign: TextAlign.center,
             ),
           ),
@@ -843,21 +808,14 @@ class _PurchaseRequestPreviewPageState
       isScrollControlled: true,
       builder: (_) {
         return SizedBox(
-          height: MediaQuery
-              .of(context)
-              .size
-              .height * .75,
+          height: MediaQuery.of(context).size.height * .75,
           child: Column(
             children: [
-
               const SizedBox(height: 12),
 
               const Text(
                 "Select Ingredient",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
               const Divider(),
@@ -873,10 +831,10 @@ class _PurchaseRequestPreviewPageState
                       onTap: () {
                         setState(() {
                           ingredients[rowIndex]["ingredientId"] =
-                          ingredient["id"];
+                              ingredient["id"];
 
                           ingredients[rowIndex]["ingredientName"] =
-                          ingredient["name"];
+                              ingredient["name"];
 
                           ingredients[rowIndex]["unitRate"] =
                               (ingredient["cost"] as num?)?.toDouble() ?? 0;

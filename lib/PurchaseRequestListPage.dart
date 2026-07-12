@@ -58,16 +58,30 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
 
     String status = selectedFilter == "All" ? "" : selectedFilter;
 
-    final url =
-        "${AppConfig.apiBaseUrl}"
-        "/api/getAllPrNumber/"
-        "${formatDate(fromDate)}/"
-        "${formatDate(toDate)}"
-        "?status=$status";
+    final body = {
+      "page": 1,
+      "size": 100,
+      "companyId": int.parse(widget.companyId),
+      "status": status.isEmpty ? null : status,
+      "fromDate": formatDate(fromDate),
+      "toDate": formatDate(toDate),
+      "prNumber": searchController.text.trim().isEmpty
+          ? null
+          : searchController.text.trim(),
+    };
 
-    print(url);
+    print("========== PR SEARCH REQUEST ==========");
+    print(jsonEncode(body));
 
-    final response = await http.get(Uri.parse(url));
+    final response = await http.post(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/search"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("========== PR SEARCH RESPONSE ==========");
+    print("Status Code: ${response.statusCode}");
+    print(response.body);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -75,6 +89,9 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
       prList = List<Map<String, dynamic>>.from(json["data"]);
 
       filteredList = List.from(prList);
+    } else {
+      print("Request Failed");
+      print(response.body);
     }
 
     setState(() {
@@ -268,13 +285,12 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
                             crossAxisAlignment: CrossAxisAlignment.end,
 
                             children: [
-                              Text(
-                                "₹${item["totalCost"]}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
+                              //   Text(
+                              //     "₹${item["totalCost"]}",
+                              //     style: const TextStyle(
+                              //       fontWeight: FontWeight.bold,
+                              //     ),
+                              //   ),
                               const SizedBox(height: 4),
 
                               Container(
@@ -313,7 +329,7 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
                               MaterialPageRoute(
                                 builder: (_) => PurchaseRequestDetailsPage(
                                   companyId: widget.companyId,
-                                  prNumber: item["prNumber"],
+                                  prId: item["prId"],
                                 ),
                               ),
                             );
@@ -331,12 +347,12 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
 
 class PurchaseRequestDetailsPage extends StatefulWidget {
   final String companyId;
-  final String prNumber;
+  final int prId;
 
   const PurchaseRequestDetailsPage({
     Key? key,
     required this.companyId,
-    required this.prNumber,
+    required this.prId,
   }) : super(key: key);
 
   @override
@@ -350,6 +366,7 @@ class _PurchaseRequestDetailsPageState
   bool loading = true;
   List<Map<String, dynamic>> ingredientMaster = [];
   List<Map<String, dynamic>> ingredients = [];
+  Map<int, Map<String, dynamic>> ingredientMap = {};
 
   @override
   void initState() {
@@ -367,16 +384,23 @@ class _PurchaseRequestDetailsPageState
       final json = jsonDecode(response.body);
 
       setState(() {
-        ingredientMaster =
-        List<Map<String, dynamic>>.from(json["data"]);
+        ingredientMaster = List<Map<String, dynamic>>.from(json["data"]);
+
+        ingredientMap = {
+          for (var item in ingredientMaster)
+            item["id"] as int: item
+        };
       });
     }
   }
 
   Future<void> loadPRDetails() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/getByPrNumber/${widget.prNumber}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/${widget.prId}"),
     );
+
+    print("Status Code: ${response.statusCode}");
+    print(response.body);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -385,8 +409,9 @@ class _PurchaseRequestDetailsPageState
         prDetails = json["data"];
 
         ingredients = List<Map<String, dynamic>>.from(
-          prDetails!["ingredients"],
+          json["data"]["ingredients"],
         );
+
         loading = false;
       });
     } else {
@@ -423,7 +448,7 @@ class _PurchaseRequestDetailsPageState
     double qty = 0;
 
     for (var item in ingredients) {
-      qty += (item["quantity"] ?? 0).toDouble();
+      qty += ((item["requiredQty"] ?? 0) as num).toDouble();
     }
 
     return qty;
@@ -433,9 +458,7 @@ class _PurchaseRequestDetailsPageState
     double amount = 0;
 
     for (var item in ingredients) {
-      amount +=
-          (item["quantity"] ?? 0).toDouble() *
-          (item["unitRate"] ?? 0).toDouble();
+      amount += ((item["estimatedAmount"] ?? 0) as num).toDouble();
     }
 
     return amount;
@@ -450,6 +473,7 @@ class _PurchaseRequestDetailsPageState
     if (prDetails == null) {
       return const Scaffold(body: Center(child: Text("No Data Found")));
     }
+    final requisition = prDetails!["requisition"];
 
     return Scaffold(
       appBar: AppBar(
@@ -474,7 +498,7 @@ class _PurchaseRequestDetailsPageState
                     Row(
                       children: [
                         Text(
-                          prDetails!["prNumber"],
+                          prDetails!["requisition"]["prNumber"],
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -493,7 +517,7 @@ class _PurchaseRequestDetailsPageState
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            prDetails!["status"],
+                            prDetails!["requisition"]["status"],
                             style: const TextStyle(
                               color: Color(0xFFF15F28),
                               fontWeight: FontWeight.bold,
@@ -508,22 +532,22 @@ class _PurchaseRequestDetailsPageState
                     infoRow(
                       Icons.calendar_today,
                       "Date Range",
-                      "${formatDate(prDetails!["fromDate"])} - ${formatDate(prDetails!["toDate"])}",
+                      "${formatDate(prDetails!["requisition"]["fromDate"])} - ${formatDate(prDetails!["requisition"]["toDate"])}",
                     ),
 
                     infoRow(
                       Icons.person,
                       "Created By",
-                      "${prDetails!["createdBy"]} • ${formatDate(prDetails!["createdTime"].substring(0, 10))}",
+                      "${requisition["createdBy"] ?? ""} • ${formatDate((requisition["createdAt"] ?? "").toString().substring(0, 10))}",
                     ),
 
-                    infoRow(Icons.fastfood, "Meals", prDetails!["mealNames"]),
-
-                    infoRow(
-                      Icons.restaurant,
-                      "Kitchen",
-                      prDetails!["kitchenNames"],
-                    ),
+                    // infoRow(Icons.fastfood, "Meals", prDetails!["mealNames"]),
+                    //
+                    // infoRow(
+                    //   Icons.restaurant,
+                    //   "Kitchen",
+                    //   prDetails!["kitchenNames"],
+                    // ),
                   ],
                 ),
               ),
@@ -578,9 +602,8 @@ class _PurchaseRequestDetailsPageState
                     DataColumn(label: Text("Rate")),
                     DataColumn(label: Text("")),
                   ],
-                  rows: (prDetails!["ingredients"] as List).map<DataRow>((
-                    item,
-                  ) {
+                  rows: ingredients.map<DataRow>((item) {
+                    final ingredient = ingredientMap[item["ingredientId"]];
                     return DataRow(
                       cells: [
                         /// Ingredient
@@ -592,19 +615,9 @@ class _PurchaseRequestDetailsPageState
                                 isExpanded: true,
                                 iconSize: 18,
                                 value:
-                                    ingredientMaster.any(
-                                      (e) =>
-                                          e["id"].toString() ==
-                                          item["ingredientId"].toString(),
-                                    )
-                                    ? ingredientMaster.firstWhere(
-                                        (e) =>
-                                            e["id"].toString() ==
-                                            item["ingredientId"].toString(),
-                                      )
-                                    : null,
+                                    ingredient,
                                 hint: Text(
-                                  "${item["ingredientName"]}",
+                                  ingredient?["name"] ?? "Select Ingredient",
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 12),
                                 ),
@@ -649,7 +662,7 @@ class _PurchaseRequestDetailsPageState
                           SizedBox(
                             width: 55,
                             child: TextFormField(
-                              initialValue: item["quantity"].toString(),
+                              initialValue: item["requiredQty"].toString(),
                               style: const TextStyle(fontSize: 12),
                               textAlign: TextAlign.center,
                               keyboardType:
@@ -664,12 +677,12 @@ class _PurchaseRequestDetailsPageState
                                 ),
                                 border: OutlineInputBorder(),
                               ),
-                              onChanged: (value) {
-                                setState(() {
-                                  item["quantity"] =
-                                      double.tryParse(value) ?? 0;
-                                });
-                              },
+                                onFieldSubmitted: (value) {
+                                  setState(() {
+                                    item["requiredQty"] =
+                                        double.tryParse(value) ?? 0;
+                                  });
+                                }
                             ),
                           ),
                         ),
@@ -679,7 +692,7 @@ class _PurchaseRequestDetailsPageState
                           SizedBox(
                             width: 65,
                             child: Text(
-                              "₹${((item["quantity"] ?? 0) * (item["unitRate"] ?? 0)).toStringAsFixed(0)}",
+                              "₹${((item["estimatedAmount"] ?? 0) as num).toStringAsFixed(2)}",
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
@@ -690,11 +703,12 @@ class _PurchaseRequestDetailsPageState
                           SizedBox(
                             width: 55,
                             child: Text(
-                              "₹${(item["unitRate"] as num).toStringAsFixed(0)}",
+                              "₹${((item["estimatedUnitPrice"] ?? 0) as num).toStringAsFixed(2)}",
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
                         ),
+
                         /// Delete
                         DataCell(
                           IconButton(
@@ -745,22 +759,44 @@ class _PurchaseRequestDetailsPageState
 
   Future<void> savePR() async {
     final body = {
-      "prNumber": prDetails!["prNumber"],
-      "ingredients": ingredients,
+      "kitchenId": prDetails!["kitchenId"],
+      "fromDate": prDetails!["fromDate"],
+      "toDate": prDetails!["toDate"],
+      "requiredByDate": prDetails!["requiredByDate"],
+      "priority": prDetails!["priority"],
+      "requestType": prDetails!["requestType"],
+      "source": prDetails!["source"],
+      "remarks": prDetails!["remarks"],
+      "actionBy": prDetails!["modifiedBy"] ?? "mobile",
+      "ingredients": ingredients
+          .map(
+            (e) => {
+              "ingredientId": e["ingredientId"],
+              // "quantity": e["quantity"],
+              "requiredQty": e["requiredQty"],
+            },
+          )
+          .toList(),
     };
 
     final response = await http.put(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/updatePurchaseRequest"),
-
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/updateDraft/${widget.prId}"),
       headers: {"Content-Type": "application/json"},
-
       body: jsonEncode(body),
     );
 
     if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Purchase Request Saved")));
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
     }
   }
 
