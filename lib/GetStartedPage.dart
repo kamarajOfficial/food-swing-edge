@@ -317,7 +317,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     DropdownMenuItem(value: "FS", child: Text("FS")),
                     DropdownMenuItem(value: "GCC", child: Text("GCC")),
                     DropdownMenuItem(value: "Janani", child: Text("Janani")),
-                    DropdownMenuItem(value: "Local", child: Text("Local")),
+                    // DropdownMenuItem(value: "Local", child: Text("Local")),
                   ],
                   onChanged: (value) {
                     setState(() {
