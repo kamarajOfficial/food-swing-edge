@@ -34,6 +34,8 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
   // ];
 
   List<String> selectedMeals = [];
+  String selectedFilter = "All";
+  String searchText = "";
 
   final List<String> meals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
   String source = "Production Plan";
@@ -128,20 +130,42 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.82,
-          minChildSize: 0.55,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (context, scrollController) {
-            return StatefulBuilder(
-              builder: (context, setSheetState) {
-                List<Map<String, dynamic>> filteredIngredients =
-                List.from(availableIngredients);
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            List<Map<String, dynamic>> filtered = availableIngredients.where((
+              e,
+            ) {
+              final stock =
+                  double.tryParse(e["netAvailableStock"].toString()) ?? 0;
 
+              bool filter = true;
+
+              if (selectedFilter == "Low Stock") {
+                filter = stock <= 20;
+              } else if (selectedFilter == "High Stock") {
+                filter = stock > 20;
+              }
+
+              bool search =
+                  e["ingredientName"].toString().toLowerCase().contains(
+                    searchText.toLowerCase(),
+                  ) ||
+                  e["code"].toString().toLowerCase().contains(
+                    searchText.toLowerCase(),
+                  );
+
+              return filter && search;
+            }).toList();
+
+            return DraggableScrollableSheet(
+              initialChildSize: .90,
+              maxChildSize: .95,
+              minChildSize: .60,
+              expand: false,
+              builder: (_, controller) {
                 return Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xfff8f9fd),
+                    color: Colors.white,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(30),
                     ),
@@ -151,7 +175,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                       const SizedBox(height: 10),
 
                       Container(
-                        width: 60,
+                        width: 45,
                         height: 5,
                         decoration: BoxDecoration(
                           color: Colors.grey.shade400,
@@ -159,41 +183,72 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                         ),
                       ),
 
-                      const SizedBox(height: 15),
-
-                      const Text(
-                        "Select Ingredient",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 15, 15, 10),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                "Select Ingredient",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => Navigator.pop(context),
+                              child: const Icon(Icons.close),
+                            ),
+                          ],
                         ),
                       ),
-
-                      const SizedBox(height: 15),
 
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: "Search ingredient...",
-                            prefixIcon: const Icon(Icons.search),
+                            hintText: "Search ingredient by name / code",
+                            hintStyle: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey.shade500,
+                              size: 20,
+                            ),
+                            suffixIcon: Icon(
+                              Icons.qr_code_scanner,
+                              color: Colors.grey.shade500,
+                              size: 20,
+                            ),
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: Colors.grey.shade100,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                              horizontal: 12,
+                            ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
+                              borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(
+                                color: Colors.orange.shade300,
+                                width: 1.2,
+                              ),
                             ),
                           ),
                           onChanged: (value) {
                             setSheetState(() {
-                              filteredIngredients = availableIngredients
-                                  .where(
-                                    (e) => e["ingredientName"]
-                                    .toString()
-                                    .toLowerCase()
-                                    .contains(value.toLowerCase()),
-                              )
-                                  .toList();
+                              searchText = value;
                             });
                           },
                         ),
@@ -201,178 +256,110 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
 
                       const SizedBox(height: 15),
 
-                      Expanded(
-                        child: ListView.builder(
-                          controller: scrollController,
-                          itemCount: filteredIngredients.length,
-                          itemBuilder: (context, index) {
-                            final item = filteredIngredients[index];
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                        child: Row(
+                          children: [
+                            filterChip("All", setSheetState),
+                            const SizedBox(width: 6),
+                            filterChip("Low Stock", setSheetState),
+                            const SizedBox(width: 6),
+                            filterChip("High Stock", setSheetState),
+                          ],
+                        ),
+                      ),
 
-                            return Card(
-                              elevation: 2,
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 6,
+                      const SizedBox(height: 15),
+
+                      Expanded(
+                        child: ListView.separated(
+                          controller: controller,
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(color: Colors.grey.shade200, height: 1),
+                          itemBuilder: (_, index) {
+                            final item = filtered[index];
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 18,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
+
+                              leading: Container(
+                                width: 45,
+                                height: 45,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.inventory_2,
+                                  color: Colors.orange,
+                                ),
                               ),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(18),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  addIngredient(item);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        height: 55,
-                                        width: 55,
+
+                              title: Text(
+                                item["ingredientName"],
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item["code"].toString()),
+
+                                  Text(
+                                    "Stock : ${item["netAvailableStock"]}",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              trailing: SizedBox(
+                                width: 85,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "₹${item["estimatedUnitPrice"]}",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    InkWell(
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        addIngredient(item);
+                                      },
+                                      child: Container(
+                                        width: 30,
+                                        height: 30,
                                         decoration: BoxDecoration(
-                                          color: Colors.orange.shade100,
-                                          borderRadius:
-                                          BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFF010440),
+                                          ),
                                         ),
                                         child: const Icon(
-                                          Icons.inventory_2,
-                                          color: Colors.orange,
-                                          size: 28,
+                                          Icons.add,
+                                          color: const Color(0xFF010440),
+                                          size: 18,
                                         ),
                                       ),
-
-                                      const SizedBox(width: 15),
-
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item["ingredientName"],
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-
-                                            const SizedBox(height: 5),
-
-                                            Text(
-                                              item["code"],
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-
-                                            const SizedBox(height: 8),
-
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                    Colors.green.shade50,
-                                                    borderRadius:
-                                                    BorderRadius.circular(
-                                                        20),
-                                                  ),
-                                                  child: Text(
-                                                    "Stock ${item["netAvailableStock"]}",
-                                                    style: TextStyle(
-                                                      color:
-                                                      Colors.green.shade700,
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                      FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-
-                                                const SizedBox(width: 8),
-
-                                                Container(
-                                                  padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                    Colors.orange.shade50,
-                                                    borderRadius:
-                                                    BorderRadius.circular(
-                                                        20),
-                                                  ),
-                                                  child: Text(
-                                                    item["uomName"],
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                      Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            "₹${item["estimatedUnitPrice"]}",
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.deepOrange,
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 10),
-
-                                          Container(
-                                            padding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 7,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.orange,
-                                              borderRadius:
-                                              BorderRadius.circular(30),
-                                            ),
-                                            child: const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.add,
-                                                  color: Colors.white,
-                                                  size: 18,
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  "ADD",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight:
-                                                    FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
@@ -387,6 +374,33 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
           },
         );
       },
+    );
+  }
+
+  Widget filterChip(String title, StateSetter setSheetState) {
+    final selected = selectedFilter == title;
+
+    return GestureDetector(
+      onTap: () {
+        setSheetState(() {
+          selectedFilter = title;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF010440) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 
@@ -781,7 +795,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
               children: [
                 const Text(
                   "Items",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
 
                 ElevatedButton(
@@ -798,36 +812,36 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
 
             // const SizedBox(height: 10),
             SizedBox(
-              height: 250,
+              height: 200,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: selectedIngredients.length,
                 itemBuilder: (context, index) {
                   final item = selectedIngredients[index];
-
                   return Container(
-                    width: 210,
+                    width: 150,
                     margin: const EdgeInsets.only(right: 15),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(.12),
+                          color: Colors.black.withOpacity(.06),
                           blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(15),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          /// Image Area
                           Stack(
+                            alignment: Alignment.center,
                             children: [
-                              /// Center Image
-                              Align(
-                                alignment: Alignment.center,
+                              Center(
                                 child: Container(
                                   height: 70,
                                   width: 70,
@@ -835,147 +849,146 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                                     color: Colors.orange.shade50,
                                     borderRadius: BorderRadius.circular(18),
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: const Icon(
-                                      Icons.inventory_2,
-                                      size: 40,
-                                      color: Colors.orange,
-                                    ),
+                                  child: const Icon(
+                                    Icons.inventory_2,
+                                    size: 20,
+                                    color: Colors.orange,
                                   ),
                                 ),
                               ),
 
-                              /// Delete Button
+                              /// Minus Button
                               Positioned(
-                                top: 0,
-                                right: 0,
-                                child: InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedIngredients.removeAt(index);
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      shape: BoxShape.circle,
+                                bottom: -8,
+                                child: Container(
+                                  height: 30,
+                                  width: 85,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
                                     ),
-                                    child: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                      size: 20,
-                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 3,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      /// Minus
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              item["qty"]--;
+
+                                              if (item["qty"] <= 0) {
+                                                selectedIngredients.removeAt(
+                                                  index,
+                                                );
+                                              }
+                                            });
+                                          },
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.remove,
+                                              size: 16,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      Container(
+                                        width: 1,
+                                        color: Colors.grey.shade300,
+                                      ),
+
+                                      /// Qty
+                                      SizedBox(
+                                        width: 28,
+                                        child: Center(
+                                          child: Text(
+                                            "${item["qty"]}",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      Container(
+                                        width: 1,
+                                        color: Colors.grey.shade300,
+                                      ),
+
+                                      /// Plus
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              item["qty"]++;
+                                            });
+                                          },
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.add,
+                                              size: 16,
+                                              color: Color(0xFF010440),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
                             ],
                           ),
 
-                          const SizedBox(height: 10),
+                          // const SizedBox(height: 28),
 
-                          Text(
-                            item["name"],
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          // const SizedBox(height: 6),
-
+                          /// UOM
                           // Container(
                           //   padding: const EdgeInsets.symmetric(
-                          //       horizontal: 12, vertical: 5),
+                          //     horizontal: 10,
+                          //     vertical: 5,
+                          //   ),
                           //   decoration: BoxDecoration(
-                          //     color: Colors.green.shade50,
-                          //     borderRadius: BorderRadius.circular(20),
+                          //     color: Colors.grey.shade200,
+                          //     borderRadius: BorderRadius.circular(8),
                           //   ),
-                          // child: Text(
-                          //   item["stock"],
-                          //   style: TextStyle(
-                          //     color: Colors.green.shade700,
-                          //     fontWeight: FontWeight.bold,
-                          //     fontSize: 8,
+                          //   child: Text(
+                          //     item["uom"],
+                          //     style: const TextStyle(
+                          //       fontSize: 8,
+                          //       fontWeight: FontWeight.w600,
+                          //     ),
                           //   ),
                           // ),
-                          // ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 25),
 
+                          /// Name
                           Text(
-                            "₹${item["rate"]}/${item["uom"]}",
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-
-                          const SizedBox(height: 5),
-
-                          Text(
-                            "₹${item["qty"] * item["rate"]}",
+                            item["name"],
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: Colors.deepOrange,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              fontSize: 17,
                             ),
                           ),
-
-                          // const Spacer(),
                           const SizedBox(height: 10),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.orange,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    if (item["qty"] > 1) {
-                                      setState(() {
-                                        item["qty"]--;
-                                      });
-                                    }
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(3),
-                                    child: Icon(
-                                      Icons.remove,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
 
-                                Container(
-                                  color: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 10,
-                                  ),
-                                  child: Text(
-                                    "${item["qty"]}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-
-                                InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      item["qty"]++;
-                                    });
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(3),
-                                    child: Icon(Icons.add, color: Colors.white),
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            "₹${(item["qty"] * item["rate"]).toStringAsFixed(2)} / ${item["uom"]}",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
@@ -988,7 +1001,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
             const SizedBox(height: 20),
 
             Card(
-              color: Colors.orange.shade50,
+              color: Colors.white60,
               child: Padding(
                 padding: const EdgeInsets.all(15),
                 child: Row(
@@ -1029,11 +1042,17 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: const Color(0xFF010440),
                     ),
                     onPressed: submitPR,
                     icon: const Icon(Icons.send),
-                    label: const Text("Submit PR"),
+                    label: const Text(
+                      "Submit PR",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],

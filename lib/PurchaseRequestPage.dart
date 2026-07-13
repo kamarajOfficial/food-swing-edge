@@ -227,6 +227,14 @@ class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
                   );
                 }),
 
+                _actionButton(Icons.report, "Reports", Colors.blue, () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Reports feature coming soon"),
+                    ),
+                  );
+                }),
+
                 //   _actionButton(Icons.inventory, "Stock", Colors.purple, () {
                 //     Navigator.push(
                 //       context,
