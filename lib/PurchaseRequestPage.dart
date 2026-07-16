@@ -9,9 +9,13 @@ import 'package:foodswing_flutter/config_loader.dart';
 
 class PurchaseRequestPage extends StatefulWidget {
   final String companyId;
+  final String username;
 
-  const PurchaseRequestPage({Key? key, required this.companyId})
-    : super(key: key);
+  const PurchaseRequestPage({
+    Key? key,
+    required this.companyId,
+    required this.username,
+  }) : super(key: key);
 
   @override
   State<PurchaseRequestPage> createState() => _PurchaseRequestPageState();
@@ -115,9 +119,15 @@ class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "PR Dashboard",
+            Text(
+              'Hi, ${widget.username}',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 5),
+
+            Text(
+              "Here's your procurement overview",
+              style: TextStyle(color: Colors.grey.shade600),
             ),
 
             const SizedBox(height: 12),
@@ -126,32 +136,36 @@ class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 1.5,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
+              childAspectRatio: 1.0,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 30,
               children: [
                 _statCard(
                   "Total PR",
                   "${dashboard["totalPRs"] ?? 0}",
                   Colors.blue,
+                  Icons.description_outlined,
                 ),
 
                 _statCard(
                   "Draft",
                   "${dashboard["draftCount"] ?? 0}",
                   Colors.orange,
+                  Icons.edit_note_outlined,
                 ),
 
                 _statCard(
                   "Approved",
                   "${dashboard["approvedCount"] ?? 0}",
                   Colors.green,
+                  Icons.verified_outlined,
                 ),
 
                 _statCard(
                   "Rejected",
                   "${dashboard["rejectedCount"] ?? 0}",
                   Colors.red,
+                  Icons.cancel_outlined,
                 ),
               ],
             ),
@@ -330,29 +344,46 @@ class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
     );
   }
 
-  Widget _statCard(String title, String value, Color color) {
+  Widget _statCard(String title, String value, Color color, IconData icon) {
     return Card(
-      elevation: 2,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: color, width: 5)),
-        ),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Container(
+              height: 38,
+              width: 38,
+              decoration: BoxDecoration(
+                color: color.withOpacity(.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+
+            const SizedBox(height: 12),
+
             Text(
               value,
               style: TextStyle(
-                color: color,
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
 
             const SizedBox(height: 6),
 
-            Text(title),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

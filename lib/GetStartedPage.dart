@@ -1766,6 +1766,7 @@ class _MainTabPageState extends State<MainTabPage> {
         InventoryPage(
           companyId: widget.companyId,
           inventoryRoles: _inventoryRoles,
+          username: widget.username,
         ),
       );
       _navItems.add(

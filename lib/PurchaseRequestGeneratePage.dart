@@ -156,7 +156,7 @@ class _PurchaseRequestGeneratePageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF7F8FC),
+      backgroundColor: const Color(0xffF5F6FA),
       appBar: AppBar(
         title: const Text("Generate PR"),
         backgroundColor: const Color(0xFF010440),
@@ -164,43 +164,43 @@ class _PurchaseRequestGeneratePageState
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               "Purchase Request Details",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
 
             Text(
               "Fill the details to generate the purchase request",
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
             ),
 
-            const SizedBox(height: 25),
+            const SizedBox(height: 22),
 
-            /// SOURCE
+            /// Source
+            const Text(
+              "Source",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+
+            const SizedBox(height: 6),
+
             DropdownButtonFormField<String>(
               value: source,
-              isExpanded: true,
               decoration: InputDecoration(
-                labelText: "Source",
-                prefixIcon: const Icon(Icons.inventory_2_outlined),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
+                  horizontal: 15,
+                  vertical: 14,
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               items: const [
@@ -216,50 +216,117 @@ class _PurchaseRequestGeneratePageState
 
             const SizedBox(height: 18),
 
-            /// FROM & TO
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
-                    controller: fromDateController,
-                    readOnly: true,
-                    onTap: () => _pickDate(true),
-                    decoration: InputDecoration(
-                      labelText: "From Date",
-                      prefixIcon: const Icon(Icons.calendar_today),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "From Date",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+
+                      const SizedBox(height: 6),
+
+                      TextFormField(
+                        controller: fromDateController,
+                        readOnly: true,
+                        onTap: () => _pickDate(true),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          suffixIcon: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Icon(
+                              Icons.calendar_today_outlined,
+                              size: 22,
+                              color: Colors.black,
+                            ),
+                          ),
+                          suffixIconConstraints: const BoxConstraints(
+                            minHeight: 45,
+                            minWidth: 45,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(width: 15),
+                const SizedBox(width: 12),
 
                 Expanded(
-                  child: TextFormField(
-                    controller: toDateController,
-                    readOnly: true,
-                    onTap: () => _pickDate(false),
-                    decoration: InputDecoration(
-                      labelText: "To Date",
-                      prefixIcon: const Icon(Icons.event),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "To Date",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+
+                      const SizedBox(height: 6),
+
+                      TextFormField(
+                        controller: toDateController,
+                        readOnly: true,
+                        onTap: () => _pickDate(false),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          suffixIcon: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Icon(
+                              Icons.calendar_today_outlined,
+                              size: 22,
+                              color: Colors.black,
+                            ),
+                          ),
+                          suffixIconConstraints: const BoxConstraints(
+                            minHeight: 45,
+                            minWidth: 45,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -267,96 +334,108 @@ class _PurchaseRequestGeneratePageState
 
             const SizedBox(height: 18),
 
-            /// KITCHEN & MEAL
-            Row(
-              children: [
-                Expanded(
-                  child: MultiSelectDialogField<Map<String, dynamic>>(
-                    items: kitchens
-                        .map(
-                          (e) => MultiSelectItem<Map<String, dynamic>>(
-                            e,
-                            e["name"],
-                          ),
-                        )
-                        .toList(),
-                    title: const Text("Kitchen"),
-                    buttonText: Text(
-                      selectedKitchens.isEmpty
-                          ? "Kitchen"
-                          : selectedKitchens.length == 1
-                          ? selectedKitchens.first["name"]
-                          : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
-                    ),
-                    searchable: true,
-                    initialValue: selectedKitchens,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(18),
-                      color: Colors.white,
-                    ),
-                    buttonIcon: const Icon(Icons.restaurant),
-                    chipDisplay: MultiSelectChipDisplay.none(),
-                    onConfirm: (values) {
-                      setState(() {
-                        selectedKitchens = values;
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(width: 15),
-                Expanded(
-                  child: MultiSelectDialogField<Map<String, dynamic>>(
-                    items: meals
-                        .map(
-                          (e) => MultiSelectItem<Map<String, dynamic>>(
-                            e,
-                            e["name"],
-                          ),
-                        )
-                        .toList(),
-                    title: const Text("Meal"),
-
-                    buttonText: Text(
-                      selectedMeals.isEmpty
-                          ? "Meal"
-                          : selectedMeals.length == 1
-                          ? selectedMeals.first["name"]
-                          : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
-                    ),
-                    searchable: true,
-                    initialValue: selectedMeals,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(18),
-                      color: Colors.white,
-                    ),
-                    buttonIcon: const Icon(Icons.fastfood),
-                    chipDisplay: MultiSelectChipDisplay.none(),
-                    onConfirm: (values) {
-                      setState(() {
-                        selectedMeals = values;
-                      });
-                    },
-                  ),
-                ),
-              ],
+            /// Kitchen
+            const Text(
+              "Kitchen",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
-            const SizedBox(height: 25),
+
+            const SizedBox(height: 6),
+
+            MultiSelectDialogField<Map<String, dynamic>>(
+              items: kitchens
+                  .map((e) => MultiSelectItem(e, e["name"]))
+                  .toList(),
+              initialValue: selectedKitchens,
+              searchable: true,
+              chipDisplay: MultiSelectChipDisplay.none(),
+              title: const Text("Kitchen"),
+              buttonText: Text(
+                selectedKitchens.isEmpty
+                    ? "Select Kitchen"
+                    : selectedKitchens.length == 1
+                    ? selectedKitchens.first["name"]
+                    : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
+              ),
+              buttonIcon: const Icon(Icons.restaurant_menu),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onConfirm: (values) {
+                setState(() {
+                  selectedKitchens = values;
+                });
+              },
+            ),
+
+            const SizedBox(height: 18),
+
+            /// Meal
+            const Text(
+              "Meal",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+
+            const SizedBox(height: 6),
+
+            MultiSelectDialogField<Map<String, dynamic>>(
+              items: meals.map((e) => MultiSelectItem(e, e["name"])).toList(),
+              searchable: true,
+              initialValue: selectedMeals,
+              chipDisplay: MultiSelectChipDisplay.none(),
+              title: const Text("Meal"),
+              buttonText: Text(
+                selectedMeals.isEmpty
+                    ? "Select Meal"
+                    : selectedMeals.length == 1
+                    ? selectedMeals.first["name"]
+                    : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
+              ),
+              buttonIcon: const Icon(Icons.fastfood_outlined),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onConfirm: (values) {
+                setState(() {
+                  selectedMeals = values;
+                });
+              },
+            ),
+
+            const SizedBox(height: 32),
 
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF15F28),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
+              height: 52,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xff2457F5), Color(0xff1B46C5)],
+                  ),
                 ),
-                onPressed: previewPurchaseRequest,
-                icon: const Icon(Icons.auto_mode),
-                label: const Text(
-                  "Generate Purchase Request",
-                  style: TextStyle(fontSize: 16),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFF15F28),
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: previewPurchaseRequest,
+                  icon: const Icon(Icons.autorenew, color: Colors.white),
+                  label: const Text(
+                    "Generate Purchase Request",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -561,22 +640,31 @@ class _PurchaseRequestPreviewPageState
                 Card(
                   margin: const EdgeInsets.all(12),
                   child: Padding(
-                    padding: const EdgeInsets.all(15),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
-                          child: summary(
-                            "Items",
-                            ingredients.length.toString(),
+                          child: _summaryItem(
+                            title: "Items",
+                            value: ingredients.length.toString(),
+                            alignment: CrossAxisAlignment.start,
                           ),
                         ),
                         Expanded(
-                          child: summary("Qty", totalQty.toStringAsFixed(2)),
+                          child: _summaryItem(
+                            title: "Qty",
+                            value: totalQty.toStringAsFixed(2),
+                            alignment: CrossAxisAlignment.center,
+                          ),
                         ),
                         Expanded(
-                          child: summary(
-                            "Amount",
-                            "₹${totalAmount.toStringAsFixed(2)}",
+                          child: _summaryItem(
+                            title: "Amount",
+                            value: "₹${totalAmount.toStringAsFixed(2)}",
+                            alignment: CrossAxisAlignment.end,
                           ),
                         ),
                       ],
@@ -587,39 +675,39 @@ class _PurchaseRequestPreviewPageState
                   child: Column(
                     children: [
                       Container(
-                        color: const Color(0xFFF15F28),
+                        color: Colors.white24,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 18,
                           vertical: 10,
                         ),
                         child: const Row(
                           children: [
                             Expanded(
-                              flex: 4,
+                              flex: 5,
                               child: Text(
                                 "Ingredient",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black),
                               ),
                             ),
                             Expanded(
                               flex: 2,
                               child: Text(
                                 "Qty",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black),
                               ),
                             ),
                             Expanded(
                               flex: 2,
                               child: Text(
                                 "Rate",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black),
                               ),
                             ),
                             Expanded(
                               flex: 2,
                               child: Text(
                                 "Cost",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black),
                               ),
                             ),
                             Expanded(flex: 1, child: SizedBox()),
@@ -650,10 +738,16 @@ class _PurchaseRequestPreviewPageState
                         backgroundColor: const Color(0xFFF15F28),
                       ),
                       onPressed: savePurchaseRequest,
-                      icon: const Icon(Icons.save),
+                      icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text(
                         "Save Purchase Request",
-                        style: TextStyle(fontSize: 16),
+                        //   style: TextStyle(fontSize: 16)
+                        // ),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -789,15 +883,45 @@ class _PurchaseRequestPreviewPageState
     );
   }
 
-  Widget summary(String title, String value) {
+  Widget _summaryItem({
+    required String title,
+    required String value,
+    required CrossAxisAlignment alignment,
+  }) {
+    TextAlign textAlign;
+
+    switch (alignment) {
+      case CrossAxisAlignment.start:
+        textAlign = TextAlign.left;
+        break;
+      case CrossAxisAlignment.center:
+        textAlign = TextAlign.center;
+        break;
+      case CrossAxisAlignment.end:
+        textAlign = TextAlign.right;
+        break;
+      default:
+        textAlign = TextAlign.left;
+    }
+
     return Column(
+      crossAxisAlignment: alignment,
       children: [
         Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          title,
+          textAlign: textAlign,
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
         ),
-        const SizedBox(height: 5),
-        Text(title),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          textAlign: textAlign,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF010440),
+          ),
+        ),
       ],
     );
   }

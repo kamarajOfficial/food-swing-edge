@@ -29,10 +29,10 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
 
   final List<String> filters = [
     "All",
+    "DRAFT",
+    "DENIED",
     "APPROVED",
     "PARTIAL PO",
-    "DENIED",
-    "DRAFT",
   ];
 
   String selectedFilter = "All";
@@ -63,8 +63,8 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
       "size": 100,
       "companyId": int.parse(widget.companyId),
       "status": status.isEmpty ? null : status,
-      "fromDate": formatDate(fromDate),
-      "toDate": formatDate(toDate),
+      // "fromDate": formatDate(fromDate),
+      // "toDate": formatDate(toDate),
       "prNumber": searchController.text.trim().isEmpty
           ? null
           : searchController.text.trim(),
@@ -175,72 +175,83 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
               controller: searchController,
               onChanged: searchPR,
               decoration: InputDecoration(
-                hintText: "Search PR Number...",
-                prefixIcon: const Icon(Icons.search),
+                hintText: "Search PR Number, Source, Kitchen...",
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Colors.grey.shade500,
+                  size: 20,
+                ),
                 filled: true,
-                // fillColor: Colors.grey.shade100,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 12,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-
-                    label: Text(formatDate(fromDate)),
-
-                    onPressed: () => pickDate(true),
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.event),
-
-                    label: Text(formatDate(toDate)),
-
-                    onPressed: () => pickDate(false),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(
+          Container(
             height: 42,
-            child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
               itemCount: filters.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 20),
               itemBuilder: (context, index) {
                 final filter = filters[index];
 
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(filter),
-                    selected: selectedFilter == filter,
-                    selectedColor: Color(0xFFF15F28),
-                    labelStyle: TextStyle(
-                      color: selectedFilter == filter
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                    onSelected: (_) {
-                      setState(() {
-                        selectedFilter = filter;
-                      });
-                      loadPurchaseRequests();
-                    },
+                final count = filter == "All"
+                    ? prList.length
+                    : prList.where((e) => e["status"] == filter).length;
+
+                final selected = selectedFilter == filter;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      selectedFilter = filter;
+                    });
+
+                    loadPurchaseRequests();
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "$filter ($count)",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: selected
+                              ? const Color(0xFF2457F5)
+                              : Colors.black87,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: selected ? 40 : 0,
+                        height: 2.5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2457F5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -258,82 +269,163 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
                     itemBuilder: (context, index) {
                       final item = filteredList[index];
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.orange.shade100,
-                            child: const Icon(
-                              Icons.description,
-                              color: Color(0xFFF15F28),
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PurchaseRequestDetailsPage(
+                                companyId: widget.companyId,
+                                prId: item["prId"],
+                              ),
                             ),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
                           ),
-
-                          title: Text(item["prNumber"]),
-
-                          subtitle: Text(
-                            "${item["fromDate"]}  →  ${item["toDate"]}",
-                          ),
-
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-
-                            crossAxisAlignment: CrossAxisAlignment.end,
-
-                            children: [
-                              //   Text(
-                              //     "₹${item["totalCost"]}",
-                              //     style: const TextStyle(
-                              //       fontWeight: FontWeight.bold,
-                              //     ),
-                              //   ),
-                              const SizedBox(height: 4),
-
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-
-                                decoration: BoxDecoration(
-                                  color: getStatusColor(
-                                    item["status"],
-                                  ).withOpacity(.15),
-
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-
-                                child: Text(
-                                  item["status"],
-
-                                  style: TextStyle(
-                                    color: getStatusColor(item["status"]),
-
-                                    fontWeight: FontWeight.bold,
-
-                                    fontSize: 11,
-                                  ),
-                                ),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(.12),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              /// PR Number + Status
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item["prNumber"],
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ),
 
-                          onTap: () {
-                            Navigator.push(
-                              context,
-
-                              MaterialPageRoute(
-                                builder: (_) => PurchaseRequestDetailsPage(
-                                  companyId: widget.companyId,
-                                  prId: item["prId"],
-                                ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: getStatusColor(
+                                        item["status"],
+                                      ).withOpacity(.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      item["status"],
+                                      style: TextStyle(
+                                        color: getStatusColor(item["status"]),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
+
+                              const SizedBox(height: 10),
+
+                              /// Source | Kitchen | Meal
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 15,
+                                    color: Colors.grey,
+                                  ),
+
+                                  const SizedBox(width: 5),
+
+                                  Expanded(
+                                    child: Text(
+                                      "${item["source"]}   •   ${item["kitchenName"]}   •   ${item["mealNames"]}",
+                                      style: TextStyle(
+                                        color: Colors.grey.shade700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              /// Date
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 15,
+                                    color: Colors.grey,
+                                  ),
+
+                                  const SizedBox(width: 5),
+
+                                  Text(
+                                    "${item["fromDate"]}  -  ${item["toDate"]}",
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              /// Items + Amount
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.shopping_basket_outlined,
+                                    size: 15,
+                                    color: Colors.grey,
+                                  ),
+
+                                  const SizedBox(width: 5),
+
+                                  Text(
+                                    "${item["totalItems"] ?? 0} Items",
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 20),
+
+                                  const Icon(
+                                    Icons.currency_rupee,
+                                    size: 15,
+                                    color: Colors.grey,
+                                  ),
+
+                                  Text(
+                                    "${item["estimatedAmount"] ?? 0}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -367,6 +459,7 @@ class _PurchaseRequestDetailsPageState
   List<Map<String, dynamic>> ingredientMaster = [];
   List<Map<String, dynamic>> ingredients = [];
   Map<int, Map<String, dynamic>> ingredientMap = {};
+  bool showItems = false;
 
   @override
   void initState() {
@@ -387,8 +480,7 @@ class _PurchaseRequestDetailsPageState
         ingredientMaster = List<Map<String, dynamic>>.from(json["data"]);
 
         ingredientMap = {
-          for (var item in ingredientMaster)
-            item["id"] as int: item
+          for (var item in ingredientMaster) item["id"] as int: item,
         };
       });
     }
@@ -487,67 +579,75 @@ class _PurchaseRequestDetailsPageState
           children: [
             /// Header
             Card(
-              elevation: 2,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        Text(
-                          prDetails!["requisition"]["prNumber"],
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            requisition["prNumber"],
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
 
-                        const SizedBox(width: 10),
-
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 12,
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
+                            color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            prDetails!["requisition"]["status"],
-                            style: const TextStyle(
-                              color: Color(0xFFF15F28),
+                            requisition["status"],
+                            style: TextStyle(
+                              color: Colors.green.shade700,
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
                         ),
                       ],
                     ),
 
-                    const Divider(height: 30),
+                    const SizedBox(height: 18),
 
-                    infoRow(
-                      Icons.calendar_today,
+                    detailRow("Source", requisition["source"] ?? ""),
+
+                    detailRow(
+                      "Kitchen",
+                      "FPU", // API kitchen name
+                    ),
+
+                    detailRow(
+                      "Meal",
+                      "Dinner", // API meal name
+                    ),
+
+                    detailRow(
                       "Date Range",
-                      "${formatDate(prDetails!["requisition"]["fromDate"])} - ${formatDate(prDetails!["requisition"]["toDate"])}",
+                      "${formatDate(requisition["fromDate"])} - ${formatDate(requisition["toDate"])}",
                     ),
 
-                    infoRow(
-                      Icons.person,
-                      "Created By",
-                      "${requisition["createdBy"] ?? ""} • ${formatDate((requisition["createdAt"] ?? "").toString().substring(0, 10))}",
-                    ),
+                    detailRow("Created By", requisition["createdBy"]),
 
-                    // infoRow(Icons.fastfood, "Meals", prDetails!["mealNames"]),
-                    //
-                    // infoRow(
-                    //   Icons.restaurant,
-                    //   "Kitchen",
-                    //   prDetails!["kitchenNames"],
-                    // ),
+                    detailRow(
+                      "Created On",
+                      requisition["createdAt"].toString().replaceFirst(
+                        "T",
+                        " ",
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -557,202 +657,290 @@ class _PurchaseRequestDetailsPageState
 
             /// Summary
             Card(
-              // color: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    summaryItem("Items", ingredients.length.toString()),
+                    Expanded(
+                      child: summary(
+                        requisition["totalItems"].toString(),
+                        "Items",
+                      ),
+                    ),
 
-                    summaryItem("Qty", totalQty.toStringAsFixed(2)),
+                    Container(
+                      height: 45,
+                      width: 1,
+                      color: Colors.grey.shade300,
+                    ),
 
-                    summaryItem("Amount", "₹${totalAmount.toStringAsFixed(2)}"),
+                    Expanded(
+                      child: summary(totalQty.toStringAsFixed(2), "Qty"),
+                    ),
+
+                    Container(
+                      height: 45,
+                      width: 1,
+                      color: Colors.grey.shade300,
+                    ),
+
+                    Expanded(
+                      child: summary(
+                        "₹${totalAmount.toStringAsFixed(2)}",
+                        "Amount",
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
             const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        showItems = !showItems;
+                      });
+                    },
+                    child: Text(showItems ? "Hide Items" : "View Items"),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF15F28),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {},
+                    child: const Text("Generate PO"),
+                  ),
+                ),
+              ],
+            ),
 
             /// Ingredient Table
-            Card(
-              elevation: 2,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  columnSpacing: 10,
-                  horizontalMargin: 8,
-                  dataRowMinHeight: 42,
-                  dataRowMaxHeight: 42,
-                  headingRowHeight: 38,
-                  headingTextStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                  dataTextStyle: const TextStyle(fontSize: 12),
-                  headingRowColor: WidgetStateProperty.all(
-                    const Color(0xFFF15F28),
-                  ),
-                  columns: const [
-                    DataColumn(label: Text("Ingredient")),
-                    DataColumn(label: Text("Qty")),
-                    DataColumn(label: Text("Cost")),
-                    DataColumn(label: Text("Rate")),
-                    DataColumn(label: Text("")),
-                  ],
-                  rows: ingredients.map<DataRow>((item) {
-                    final ingredient = ingredientMap[item["ingredientId"]];
-                    return DataRow(
-                      cells: [
-                        /// Ingredient
-                        DataCell(
-                          SizedBox(
-                            width: 170,
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<Map<String, dynamic>>(
-                                isExpanded: true,
-                                iconSize: 18,
-                                value:
-                                    ingredient,
-                                hint: Text(
-                                  ingredient?["name"] ?? "Select Ingredient",
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
+            if (showItems)
+              Card(
+                elevation: 2,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columnSpacing: 10,
+                    horizontalMargin: 8,
+                    dataRowMinHeight: 42,
+                    dataRowMaxHeight: 42,
+                    headingRowHeight: 38,
+                    headingTextStyle: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    dataTextStyle: const TextStyle(fontSize: 12),
+                    headingRowColor: WidgetStateProperty.all(
+                      const Color(0xFFF15F28),
+                    ),
+                    columns: const [
+                      DataColumn(label: Text("Ingredient")),
+                      DataColumn(label: Text("Qty")),
+                      DataColumn(label: Text("Cost")),
+                      DataColumn(label: Text("Rate")),
+                      DataColumn(label: Text("")),
+                    ],
+                    rows: ingredients.map<DataRow>((item) {
+                      final ingredient = ingredientMap[item["ingredientId"]];
+                      return DataRow(
+                        cells: [
+                          /// Ingredient
+                          DataCell(
+                            SizedBox(
+                              width: 170,
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<Map<String, dynamic>>(
+                                  isExpanded: true,
+                                  iconSize: 18,
+                                  value: ingredient,
+                                  hint: Text(
+                                    ingredient?["name"] ?? "Select Ingredient",
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  items: ingredientMaster.map((ingredient) {
+                                    return DropdownMenuItem<
+                                      Map<String, dynamic>
+                                    >(
+                                      value: ingredient,
+                                      child: Text(
+                                        ingredient["name"],
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (selected) {
+                                    if (selected == null) return;
+
+                                    setState(() {
+                                      item["ingredientId"] = selected["id"];
+
+                                      final parts = selected["name"]
+                                          .toString()
+                                          .split(" - ");
+
+                                      item["ingredientName"] = parts.first;
+                                      item["erpId"] = parts.length > 1
+                                          ? parts.last
+                                          : "";
+
+                                      item["unitRate"] =
+                                          (selected["cost"] as num).toDouble();
+
+                                      item["name"] = selected["uomName"];
+                                    });
+                                  },
                                 ),
-                                items: ingredientMaster.map((ingredient) {
-                                  return DropdownMenuItem<Map<String, dynamic>>(
-                                    value: ingredient,
-                                    child: Text(
-                                      ingredient["name"],
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (selected) {
-                                  if (selected == null) return;
-
-                                  setState(() {
-                                    item["ingredientId"] = selected["id"];
-
-                                    final parts = selected["name"]
-                                        .toString()
-                                        .split(" - ");
-
-                                    item["ingredientName"] = parts.first;
-                                    item["erpId"] = parts.length > 1
-                                        ? parts.last
-                                        : "";
-
-                                    item["unitRate"] = (selected["cost"] as num)
-                                        .toDouble();
-
-                                    item["name"] = selected["uomName"];
-                                  });
-                                },
                               ),
                             ),
                           ),
-                        ),
 
-                        /// Qty
-                        DataCell(
-                          SizedBox(
-                            width: 55,
-                            child: TextFormField(
-                              initialValue: item["requiredQty"].toString(),
-                              style: const TextStyle(fontSize: 12),
-                              textAlign: TextAlign.center,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
+                          /// Qty
+                          DataCell(
+                            SizedBox(
+                              width: 55,
+                              child: TextFormField(
+                                initialValue: item["requiredQty"].toString(),
+                                style: const TextStyle(fontSize: 12),
+                                textAlign: TextAlign.center,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 8,
                                   ),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 8,
+                                  border: OutlineInputBorder(),
                                 ),
-                                border: OutlineInputBorder(),
-                              ),
                                 onFieldSubmitted: (value) {
                                   setState(() {
                                     item["requiredQty"] =
                                         double.tryParse(value) ?? 0;
                                   });
-                                }
+                                },
+                              ),
                             ),
                           ),
-                        ),
 
-                        /// Cost
-                        DataCell(
-                          SizedBox(
-                            width: 65,
-                            child: Text(
-                              "₹${((item["estimatedAmount"] ?? 0) as num).toStringAsFixed(2)}",
-                              style: const TextStyle(fontSize: 12),
+                          /// Cost
+                          DataCell(
+                            SizedBox(
+                              width: 65,
+                              child: Text(
+                                "₹${((item["estimatedAmount"] ?? 0) as num).toStringAsFixed(2)}",
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
                           ),
-                        ),
 
-                        /// Rate
-                        DataCell(
-                          SizedBox(
-                            width: 55,
-                            child: Text(
-                              "₹${((item["estimatedUnitPrice"] ?? 0) as num).toStringAsFixed(2)}",
-                              style: const TextStyle(fontSize: 12),
+                          /// Rate
+                          DataCell(
+                            SizedBox(
+                              width: 55,
+                              child: Text(
+                                "₹${((item["estimatedUnitPrice"] ?? 0) as num).toStringAsFixed(2)}",
+                                style: const TextStyle(fontSize: 12),
+                              ),
                             ),
                           ),
-                        ),
 
-                        /// Delete
-                        DataCell(
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            iconSize: 18,
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
+                          /// Delete
+                          DataCell(
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              iconSize: 18,
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  ingredients.remove(item);
+                                });
+                              },
                             ),
-                            onPressed: () {
-                              setState(() {
-                                ingredients.remove(item);
-                              });
-                            },
                           ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF15F28),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-
-                icon: const Icon(Icons.save),
-
-                label: const Text(
-                  "Save Purchase Request",
-                  style: TextStyle(fontSize: 16),
-                ),
-
-                onPressed: savePR,
-              ),
-            ),
+            // const SizedBox(height: 10),
+            // SizedBox(
+            //   width: double.infinity,
+            //   child: ElevatedButton.icon(
+            //     style: ElevatedButton.styleFrom(
+            //       backgroundColor: const Color(0xFFF15F28),
+            //       padding: const EdgeInsets.symmetric(vertical: 16),
+            //     ),
+            //
+            //     icon: const Icon(Icons.save),
+            //
+            //     label: const Text(
+            //       "Save Purchase Request",
+            //       style: TextStyle(fontSize: 16),
+            //     ),
+            //
+            //     onPressed: savePR,
+            //   ),
+            // ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget detailRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              title,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ),
+
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -798,6 +986,24 @@ class _PurchaseRequestDetailsPageState
         context,
       ).showSnackBar(SnackBar(content: Text(response.body)));
     }
+  }
+
+  Widget summary(String value, String title) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+
+        const SizedBox(height: 4),
+
+        Text(
+          title,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        ),
+      ],
+    );
   }
 
   Widget infoRow(IconData icon, String title, String value) {

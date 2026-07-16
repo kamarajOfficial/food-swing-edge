@@ -6,11 +6,13 @@ import 'PurchaseRequestPage.dart';
 class InventoryPage extends StatelessWidget {
   final String companyId;
   final Set<String> inventoryRoles;
+  final String username;
 
   InventoryPage({
     Key? key,
     required this.companyId,
     required this.inventoryRoles,
+    required this.username,
   }) : super(key: key);
 
   @override
@@ -76,7 +78,10 @@ class InventoryPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PurchaseRequestPage(companyId: companyId),
+            builder: (_) => PurchaseRequestPage(
+              companyId: companyId,
+              username: username,
+            ),
           ),
         );
         break;

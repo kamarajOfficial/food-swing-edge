@@ -210,17 +210,12 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                           decoration: InputDecoration(
                             hintText: "Search ingredient by name / code",
                             hintStyle: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Colors.grey.shade500,
                               fontWeight: FontWeight.w400,
                             ),
                             prefixIcon: Icon(
                               Icons.search,
-                              color: Colors.grey.shade500,
-                              size: 20,
-                            ),
-                            suffixIcon: Icon(
-                              Icons.qr_code_scanner,
                               color: Colors.grey.shade500,
                               size: 20,
                             ),
@@ -593,8 +588,9 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -603,7 +599,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                   /// SOURCE
                   DropdownButtonFormField<String>(
                     value: source,
-                    isExpanded: true,
+                    isDense: true,
                     decoration: InputDecoration(
                       labelText: "Source",
                       prefixIcon: const Icon(Icons.inventory_2_outlined),
@@ -624,15 +620,16 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     items: const [
                       DropdownMenuItem(
                         value: "Production Plan",
-                        child: Text("Production Plan"),
+                        child: Text(
+                          "Production Plan",
+                          style: TextStyle(fontSize: 13),
+                        ),
                       ),
                     ],
-                    onChanged: (v) {
-                      setState(() => source = v!);
-                    },
+                    onChanged: (v) => setState(() => source = v!),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
                   /// FROM & TO
                   Row(
@@ -642,72 +639,81 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                           controller: fromDateController,
                           readOnly: true,
                           onTap: () => _pickDate(true),
+                          style: const TextStyle(fontSize: 13),
                           decoration: InputDecoration(
                             labelText: "From Date",
-                            prefixIcon: const Icon(Icons.calendar_today),
+                            isDense: true,
+                            prefixIcon: const Icon(
+                              Icons.calendar_today,
+                              size: 18,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
                       ),
-
-                      const SizedBox(width: 10),
-
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
                           controller: toDateController,
                           readOnly: true,
                           onTap: () => _pickDate(false),
+                          style: const TextStyle(fontSize: 13),
                           decoration: InputDecoration(
                             labelText: "To Date",
-                            prefixIcon: const Icon(Icons.event),
+                            isDense: true,
+                            prefixIcon: const Icon(Icons.event, size: 18),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
 
-                  /// KITCHEN & MEAL
+                  const SizedBox(height: 12),
+
+                  /// Kitchen & Meal
                   Row(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<Map<String, dynamic>>(
                           value: selectedKitchen,
                           isExpanded: true,
+                          isDense: true,
                           decoration: InputDecoration(
                             labelText: "Kitchen",
-                            prefixIcon: const Icon(Icons.restaurant),
+                            prefixIcon: const Icon(Icons.restaurant, size: 18),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           items: kitchens.map((kitchen) {
                             return DropdownMenuItem<Map<String, dynamic>>(
                               value: kitchen,
-                              child: Text(kitchen["name"]),
+                              child: Text(
+                                kitchen["name"],
+                                style: const TextStyle(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -718,29 +724,31 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                         ),
                       ),
 
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
+
                       Expanded(
                         child: MultiSelectDialogField<String>(
                           items: meals
                               .map((e) => MultiSelectItem<String>(e, e))
                               .toList(),
                           title: const Text("Meal"),
-
+                          searchable: true,
+                          initialValue: selectedMeals,
                           buttonText: Text(
                             selectedMeals.isEmpty
                                 ? "Meal"
                                 : selectedMeals.length == 1
                                 ? selectedMeals.first
                                 : "${selectedMeals.first} +${selectedMeals.length - 1}",
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          searchable: true,
-                          initialValue: selectedMeals,
+                          buttonIcon: const Icon(Icons.fastfood, size: 18),
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(18),
                             color: Colors.white,
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          buttonIcon: const Icon(Icons.fastfood),
                           chipDisplay: MultiSelectChipDisplay.none(),
                           onConfirm: (values) {
                             setState(() {
@@ -1042,10 +1050,11 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF010440),
+                      // backgroundColor: const Color(0xFF010440),
+                      backgroundColor: const Color(0xFFF15F28),
                     ),
                     onPressed: submitPR,
-                    icon: const Icon(Icons.send),
+                    icon: const Icon(Icons.send, color: Colors.white),
                     label: const Text(
                       "Submit PR",
                       style: TextStyle(
