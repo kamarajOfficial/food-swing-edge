@@ -235,7 +235,7 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
                               ? FontWeight.bold
                               : FontWeight.w500,
                           color: selected
-                              ? const Color(0xFF2457F5)
+                              ? const Color(0xFF010440)
                               : Colors.black87,
                         ),
                       ),
@@ -247,7 +247,7 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
                         width: selected ? 40 : 0,
                         height: 2.5,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2457F5),
+                          color: const Color(0xFF010440),
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
@@ -459,13 +459,23 @@ class _PurchaseRequestDetailsPageState
   List<Map<String, dynamic>> ingredientMaster = [];
   List<Map<String, dynamic>> ingredients = [];
   Map<int, Map<String, dynamic>> ingredientMap = {};
+  Map<int, String> ingredientNameMap = {};
   bool showItems = false;
 
   @override
   void initState() {
     super.initState();
-    loadIngredients();
-    loadPRDetails();
+    loadAll();
+  }
+
+  Future<void> loadAll() async {
+    await Future.wait([loadIngredients(), loadPRDetails()]);
+
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Future<void> loadIngredients() async {
@@ -482,6 +492,10 @@ class _PurchaseRequestDetailsPageState
         ingredientMap = {
           for (var item in ingredientMaster) item["id"] as int: item,
         };
+        ingredientNameMap = {
+          for (final item in ingredientMaster)
+            item["id"] as int: item["name"].toString(),
+        };
       });
     }
   }
@@ -497,19 +511,49 @@ class _PurchaseRequestDetailsPageState
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      setState(() {
-        prDetails = json["data"];
+      prDetails = json["data"];
 
-        ingredients = List<Map<String, dynamic>>.from(
-          json["data"]["ingredients"],
-        );
-
-        loading = false;
-      });
+      ingredients = List<Map<String, dynamic>>.from(
+        json["data"]["ingredients"],
+      );
     } else {
-      setState(() {
-        loading = false;
-      });
+      setState(() {});
+    }
+  }
+
+  Future<void> updateStatus({
+    required String endpoint,
+    required String successMessage,
+  }) async {
+    final body = {
+      "remarks": "",
+      "actionBy": prDetails!["requisition"]["modifiedBy"] ?? "mobile",
+    };
+    print("========== UPDATE STATUS ==========");
+    print("${AppConfig.apiBaseUrl}/api/pr/$endpoint/${widget.prId}");
+    print(jsonEncode(body));
+
+    final response = await http.put(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/$endpoint/${widget.prId}"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("Status : ${response.statusCode}");
+    print(response.body);
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
+
+      await loadAll();
+
+      setState(() {});
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
     }
   }
 
@@ -566,6 +610,7 @@ class _PurchaseRequestDetailsPageState
       return const Scaffold(body: Center(child: Text("No Data Found")));
     }
     final requisition = prDetails!["requisition"];
+    final status = requisition["status"];
 
     return Scaffold(
       appBar: AppBar(
@@ -629,11 +674,10 @@ class _PurchaseRequestDetailsPageState
                       "FPU", // API kitchen name
                     ),
 
-                    detailRow(
-                      "Meal",
-                      "Dinner", // API meal name
-                    ),
-
+                    // detailRow(
+                    //   "Meal",
+                    //   "Dinner", // API meal name
+                    // ),
                     detailRow(
                       "Date Range",
                       "${formatDate(requisition["fromDate"])} - ${formatDate(requisition["toDate"])}",
@@ -704,12 +748,6 @@ class _PurchaseRequestDetailsPageState
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
                     onPressed: () {
                       setState(() {
                         showItems = !showItems;
@@ -721,19 +759,7 @@ class _PurchaseRequestDetailsPageState
 
                 const SizedBox(width: 12),
 
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF15F28),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () {},
-                    child: const Text("Generate PO"),
-                  ),
-                ),
+                Expanded(child: buildActionButton(status)),
               ],
             ),
 
@@ -741,159 +767,56 @@ class _PurchaseRequestDetailsPageState
             if (showItems)
               Card(
                 elevation: 2,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columnSpacing: 10,
-                    horizontalMargin: 8,
-                    dataRowMinHeight: 42,
-                    dataRowMaxHeight: 42,
-                    headingRowHeight: 38,
-                    headingTextStyle: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                    dataTextStyle: const TextStyle(fontSize: 12),
-                    headingRowColor: WidgetStateProperty.all(
-                      const Color(0xFFF15F28),
-                    ),
-                    columns: const [
-                      DataColumn(label: Text("Ingredient")),
-                      DataColumn(label: Text("Qty")),
-                      DataColumn(label: Text("Cost")),
-                      DataColumn(label: Text("Rate")),
-                      DataColumn(label: Text("")),
-                    ],
-                    rows: ingredients.map<DataRow>((item) {
-                      final ingredient = ingredientMap[item["ingredientId"]];
-                      return DataRow(
-                        cells: [
-                          /// Ingredient
-                          DataCell(
-                            SizedBox(
-                              width: 170,
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<Map<String, dynamic>>(
-                                  isExpanded: true,
-                                  iconSize: 18,
-                                  value: ingredient,
-                                  hint: Text(
-                                    ingredient?["name"] ?? "Select Ingredient",
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  items: ingredientMaster.map((ingredient) {
-                                    return DropdownMenuItem<
-                                      Map<String, dynamic>
-                                    >(
-                                      value: ingredient,
-                                      child: Text(
-                                        ingredient["name"],
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (selected) {
-                                    if (selected == null) return;
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: ingredients.length,
+                  separatorBuilder: (_, __) => Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = ingredients[index];
 
-                                    setState(() {
-                                      item["ingredientId"] = selected["id"];
+                    final ingredient = ingredientMap[item["ingredientId"]];
 
-                                      final parts = selected["name"]
-                                          .toString()
-                                          .split(" - ");
-
-                                      item["ingredientName"] = parts.first;
-                                      item["erpId"] = parts.length > 1
-                                          ? parts.last
-                                          : "";
-
-                                      item["unitRate"] =
-                                          (selected["cost"] as num).toDouble();
-
-                                      item["name"] = selected["uomName"];
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.orange.shade100,
+                        child: Text(
+                          "${index + 1}",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      title: Text(
+                        ingredient?["name"] ?? "Unknown Ingredient",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text("Qty : ${item["requiredQty"]}"),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            "₹${item["estimatedAmount"]}",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-
-                          /// Qty
-                          DataCell(
-                            SizedBox(
-                              width: 55,
-                              child: TextFormField(
-                                initialValue: item["requiredQty"].toString(),
-                                style: const TextStyle(fontSize: 12),
-                                textAlign: TextAlign.center,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 8,
-                                  ),
-                                  border: OutlineInputBorder(),
-                                ),
-                                onFieldSubmitted: (value) {
-                                  setState(() {
-                                    item["requiredQty"] =
-                                        double.tryParse(value) ?? 0;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-
-                          /// Cost
-                          DataCell(
-                            SizedBox(
-                              width: 65,
-                              child: Text(
-                                "₹${((item["estimatedAmount"] ?? 0) as num).toStringAsFixed(2)}",
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ),
-
-                          /// Rate
-                          DataCell(
-                            SizedBox(
-                              width: 55,
-                              child: Text(
-                                "₹${((item["estimatedUnitPrice"] ?? 0) as num).toStringAsFixed(2)}",
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ),
-
-                          /// Delete
-                          DataCell(
-                            IconButton(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              iconSize: 18,
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  ingredients.remove(item);
-                                });
-                              },
+                          Text(
+                            "Rate ₹${item["estimatedUnitPrice"]}",
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 11,
                             ),
                           ),
                         ],
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             // const SizedBox(height: 10),
@@ -919,6 +842,81 @@ class _PurchaseRequestDetailsPageState
         ),
       ),
     );
+  }
+
+  Widget buildActionButton(String status) {
+    print(status);
+    switch (status) {
+      case "DRAFT":
+        return ElevatedButton(
+          onPressed: () {
+            updateStatus(
+              endpoint: "submit",
+              successMessage: "Purchase Request Submitted",
+            );
+          },
+          child: const Text("Submit PR"),
+        );
+
+      case "SUBMITTED":
+        return Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                onPressed: () {
+                  updateStatus(
+                    endpoint: "approve",
+                    successMessage: "PR Approved",
+                  );
+                },
+                child: const Text("Approve"),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  updateStatus(
+                    endpoint: "reject",
+                    successMessage: "PR Rejected",
+                  );
+                },
+                child: const Text("Reject"),
+              ),
+            ),
+          ],
+        );
+
+      case "APPROVED":
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF15F28),
+          ),
+          onPressed: () {
+            // Navigate Generate PO
+          },
+          child: const Text("Generate PO"),
+        );
+
+      case "REJECTED":
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+          onPressed: () {
+            updateStatus(endpoint: "close", successMessage: "PR Closed");
+          },
+          child: const Text("Close"),
+        );
+
+      case "CLOSED":
+        return ElevatedButton(onPressed: null, child: const Text("Closed"));
+
+      default:
+        return const SizedBox();
+    }
   }
 
   Widget detailRow(String title, String value) {
@@ -993,7 +991,7 @@ class _PurchaseRequestDetailsPageState
       children: [
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
 
         const SizedBox(height: 4),

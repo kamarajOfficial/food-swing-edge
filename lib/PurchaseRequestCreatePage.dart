@@ -18,7 +18,6 @@ class PurchaseRequestCreatePage extends StatefulWidget {
 }
 
 class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
-  // List<String> selectedKitchens = [];
   List<Map<String, dynamic>> kitchens = [];
 
   Map<String, dynamic>? selectedKitchen;
@@ -27,17 +26,12 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
   List<Map<String, dynamic>> selectedIngredients = [];
   int? createdPrId;
 
-  // final List<String> kitchens = [
-  //   "Central Kitchen",
-  //   "Outlet Kitchen",
-  //   "Bakery Kitchen",
-  // ];
-
   List<String> selectedMeals = [];
   String selectedFilter = "All";
   String searchText = "";
+  List<Map<String, dynamic>> meals = [];
+  List<int> selectedMealIds = [];
 
-  final List<String> meals = ["Breakfast", "Lunch", "Dinner", "Snacks"];
   String source = "Production Plan";
   String kitchen = "Central Kitchen";
   String meal = "Breakfast";
@@ -409,16 +403,58 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
     setState(() {
       selectedIngredients.add({
         "ingredientId": ingredient["ingredientId"],
+        "ingredientName": ingredient["ingredientName"],
+        "ingredientCode": ingredient["code"],
 
-        "name": ingredient["ingredientName"],
+        "uomId": ingredient["uomId"],
+        "uomName": ingredient["uomName"],
 
+        "ingredientTypeId": ingredient["ingredientTypeId"],
+        "ingredientTypeName": ingredient["ingredientTypeName"],
+
+        "perishableType": ingredient["perishableType"],
+
+        // quantity editable by user
         "qty": 1,
 
-        "rate": ingredient["estimatedUnitPrice"],
+        // values from Kitchen Ingredient API
+        "availableStock":
+            ingredient["availableStock"] ??
+            ingredient["netAvailableStock"] ??
+            0,
 
+        "reservedStock": ingredient["reservedStock"] ?? 0,
+
+        "pendingPoQty": ingredient["pendingPoQty"] ?? 0,
+
+        "netRequiredQty": ingredient["netRequiredQty"] ?? 0,
+
+        "estimatedUnitPrice": (ingredient["estimatedUnitPrice"] ?? 0)
+            .toDouble(),
+
+        "estimatedAmount": (ingredient["estimatedAmount"] ?? 0).toDouble(),
+
+        "remarks": "",
+
+        "sourceType": ingredient["sourceType"],
+
+        "sourceDate": ingredient["sourceDate"],
+
+        "orderDate": ingredient["orderDate"],
+
+        "originalOrderDates": ingredient["originalOrderDates"],
+
+        "mealId": ingredient["mealId"],
+
+        "mealName": ingredient["mealName"],
+
+        "productionPlanItems": ingredient["productionPlanItems"],
+
+        // for UI
+        "name": ingredient["ingredientName"],
         "uom": ingredient["uomName"],
-
-        "stock": ingredient["netAvailableStock"],
+        "rate": (ingredient["estimatedUnitPrice"] ?? 0).toDouble(),
+        "stock": ingredient["netAvailableStock"] ?? 0,
       });
     });
   }
@@ -480,7 +516,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       return;
     }
 
-    if (selectedMeals.isEmpty) {
+    if (selectedMealIds.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Select Meal")));
@@ -498,7 +534,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       "kitchenId": selectedKitchen!["id"],
 
       // Replace with actual meal ids from your API
-      "mealIds": selectedMeals.map((e) => int.parse(e)).toList(),
+      "mealIds": selectedMealIds,
 
       "companyIds": [int.parse(widget.companyId)],
 
@@ -512,9 +548,35 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       "remarks": remarksController.text,
       "actionBy": "PR",
 
-      "ingredients": selectedIngredients
-          .map((e) => {"ingredientId": e["ingredientId"], "quantity": e["qty"]})
-          .toList(),
+      "ingredients": selectedIngredients.map((e) {
+        return {
+          "ingredientId": e["ingredientId"],
+          "ingredientName": e["ingredientName"],
+          "ingredientCode": e["ingredientCode"],
+          "uomId": e["uomId"],
+          "uomName": e["uomName"],
+          "ingredientTypeId": e["ingredientTypeId"],
+          "ingredientTypeName": e["ingredientTypeName"],
+          "perishableType": e["perishableType"],
+          "requiredQty": e["qty"],
+          "availableStock": e["availableStock"],
+          "reservedStock": e["reservedStock"],
+          "pendingPoQty": e["pendingPoQty"],
+          "netRequiredQty": e["netRequiredQty"],
+          "estimatedUnitPrice": e["estimatedUnitPrice"],
+          "estimatedAmount":
+              ((e["qty"] ?? 0) as num).toDouble() *
+              ((e["estimatedUnitPrice"] ?? 0) as num).toDouble(),
+          "remarks": "",
+          "sourceType": e["sourceType"],
+          "sourceDate": e["sourceDate"],
+          "orderDate": e["orderDate"],
+          "originalOrderDates": e["originalOrderDates"],
+          "mealId": e["mealId"],
+          "mealName": e["mealName"],
+          "productionPlanItems": e["productionPlanItems"],
+        };
+      }).toList(),
     };
 
     print(jsonEncode(body));
@@ -553,6 +615,21 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
         "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
 
     loadKitchens();
+    loadMeals();
+  }
+
+  Future<void> loadMeals() async {
+    final response = await http.get(
+      Uri.parse("${AppConfig.localBaseUrl}/api/mealAllGetMobile/list"),
+    );
+
+    if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      setState(() {
+        meals = List<Map<String, dynamic>>.from(jsonData["data"]);
+      });
+    }
   }
 
   Future<void> _pickDate(bool isFromDate) async {
@@ -727,32 +804,39 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                       const SizedBox(width: 8),
 
                       Expanded(
-                        child: MultiSelectDialogField<String>(
-                          items: meals
-                              .map((e) => MultiSelectItem<String>(e, e))
-                              .toList(),
+                        child: MultiSelectDialogField<int>(
+                          items: meals.map((meal) {
+                            return MultiSelectItem<int>(
+                              meal["id"],
+                              meal["name"],
+                            );
+                          }).toList(),
+
                           title: const Text("Meal"),
                           searchable: true,
-                          initialValue: selectedMeals,
+
+                          initialValue: selectedMealIds,
+
                           buttonText: Text(
-                            selectedMeals.isEmpty
+                            selectedMealIds.isEmpty
                                 ? "Meal"
-                                : selectedMeals.length == 1
-                                ? selectedMeals.first
-                                : "${selectedMeals.first} +${selectedMeals.length - 1}",
+                                : "${selectedMealIds.length} Selected",
                             style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
                           ),
+
                           buttonIcon: const Icon(Icons.fastfood, size: 18),
+
                           decoration: BoxDecoration(
                             color: Colors.white,
                             border: Border.all(color: Colors.grey.shade300),
                             borderRadius: BorderRadius.circular(10),
                           ),
+
                           chipDisplay: MultiSelectChipDisplay.none(),
+
                           onConfirm: (values) {
                             setState(() {
-                              selectedMeals = values;
+                              selectedMealIds = values;
                             });
                           },
                         ),
@@ -797,7 +881,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
               ),
             ),
 
-            // const SizedBox(height: 2),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1006,7 +1090,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                 },
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 50),
 
             Card(
               color: Colors.white60,
@@ -1033,30 +1117,25 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
               ),
             ),
 
-            const SizedBox(height: 25),
+            const SizedBox(height: 50),
 
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: saveDraft,
-                    icon: const Icon(Icons.save),
-                    label: const Text("Save Draft"),
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                Expanded(
                   child: ElevatedButton.icon(
+                    onPressed: saveDraft,
                     style: ElevatedButton.styleFrom(
-                      // backgroundColor: const Color(0xFF010440),
                       backgroundColor: const Color(0xFFF15F28),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    onPressed: submitPR,
-                    icon: const Icon(Icons.send, color: Colors.white),
+                    icon: const Icon(Icons.save, color: Colors.white),
                     label: const Text(
-                      "Submit PR",
+                      "Save Draft",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -1064,10 +1143,30 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     ),
                   ),
                 ),
+
+                // const SizedBox(width: 10),
+
+                // Expanded(
+                //   child: ElevatedButton.icon(
+                //     style: ElevatedButton.styleFrom(
+                //       // backgroundColor: const Color(0xFF010440),
+                //       backgroundColor: const Color(0xFFF15F28),
+                //     ),
+                //     onPressed: submitPR,
+                //     icon: const Icon(Icons.send, color: Colors.white),
+                //     label: const Text(
+                //       "Submit PR",
+                //       style: TextStyle(
+                //         color: Colors.white,
+                //         fontWeight: FontWeight.w600,
+                //       ),
+                //      ),
+                //    ),
+                // ),
               ],
             ),
 
-            const SizedBox(height: 20),
+            // const SizedBox(height: 20),
           ],
         ),
       ),

@@ -109,6 +109,9 @@ class _PurchaseRequestGeneratePageState
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
+      print(jsonEncode(json["data"]));
+
+      print("Response: ${response}");
 
       Navigator.push(
         context,
@@ -544,14 +547,40 @@ class _PurchaseRequestPreviewPageState
       "remarks": "",
       "actionBy": "PR",
 
-      "ingredients": ingredients
-          .map(
-            (e) => {
-              "ingredientId": e["ingredientId"],
-              "quantity": e["quantity"],
-            },
-          )
-          .toList(),
+      "ingredients": ingredients.map((e) {
+        return {
+          "ingredientId": e["ingredientId"],
+          "ingredientName": e["ingredientName"],
+          "ingredientCode": e["ingredientCode"],
+          "uomId": e["uomId"],
+          "uomName": e["uomName"],
+          "ingredientTypeId": e["ingredientTypeId"],
+          "ingredientTypeName": e["ingredientTypeName"],
+          "perishableType": e["perishableType"],
+          // "requiredQty": e["qty"],
+          "availableStock": e["availableStock"],
+          "reservedStock": e["reservedStock"],
+          "pendingPoQty": e["pendingPoQty"],
+          "requiredQty": e["quantity"],
+          "estimatedUnitPrice": e["unitRate"],
+          "estimatedAmount":
+          ((e["quantity"] ?? 0) as num).toDouble() *
+              ((e["unitRate"] ?? 0) as num).toDouble(),
+          "netRequiredQty": e["netRequiredQty"],
+          // "estimatedUnitPrice": e["estimatedUnitPrice"],
+          // "estimatedAmount":
+          //     ((e["qty"] ?? 0) as num).toDouble() *
+          //     ((e["estimatedUnitPrice"] ?? 0) as num).toDouble(),
+          "remarks": "",
+          "sourceType": e["sourceType"],
+          "sourceDate": e["sourceDate"],
+          "orderDate": e["orderDate"],
+          "originalOrderDates": e["originalOrderDates"],
+          "mealId": e["mealId"],
+          "mealName": e["mealName"],
+          "productionPlanItems": e["productionPlanItems"],
+        };
+      }).toList(),
     };
 
     print(jsonEncode(body));
@@ -579,51 +608,6 @@ class _PurchaseRequestPreviewPageState
       ).showSnackBar(SnackBar(content: Text(response.body)));
     }
   }
-
-  // Future<void> savePurchaseRequest() async {
-  //   final body = {
-  //     "fromDate": widget.fromDate,
-  //     "toDate": widget.toDate,
-  //     "mealIds": widget.mealIds.split(",").map(int.parse).toList(),
-  //     "kitchenIds": widget.kitchenIds.split(",").map(int.parse).toList(),
-  //     "ingredients": ingredients
-  //         .map(
-  //           (e) => {
-  //             "ingredientId": e["ingredientId"],
-  //             "quantity": e["quantity"],
-  //           },
-  //         )
-  //         .toList(),
-  //   };
-  //
-  //   print(jsonEncode(body));
-  //
-  //   /// Replace with your save API
-  //   final response = await http.post(
-  //     Uri.parse("${AppConfig.apiBaseUrl}/api/savePurchaseRequest"),
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: jsonEncode(body),
-  //   );
-  //
-  //   print("Status Code : ${response.statusCode}");
-  //   print("Response : ${response.body}");
-  //
-  //   if (response.statusCode == 200) {
-  //     final json = jsonDecode(response.body);
-  //
-  //     ScaffoldMessenger.of(
-  //       context,
-  //     ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
-  //
-  //     Navigator.pop(context, true);
-  //   } else {
-  //     ScaffoldMessenger.of(
-  //       context,
-  //     ).showSnackBar(const SnackBar(content: Text("Failed to save PR")));
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {

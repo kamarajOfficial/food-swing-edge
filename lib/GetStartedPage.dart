@@ -150,7 +150,6 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isButtonEnabled = false;
-  String? _selectedOption;
 
   @override
   void initState() {
@@ -163,8 +162,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
     setState(() {
       _isButtonEnabled =
           _phoneController.text.length == 10 &&
-              _passwordController.text.isNotEmpty &&
-              _selectedOption != null;
+              _passwordController.text.isNotEmpty;
     });
   }
 
@@ -304,35 +302,6 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                DropdownButtonFormField<String>(
-                  value: _selectedOption,
-                  decoration: InputDecoration(
-                    labelText: "Select Organization",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: "FS", child: Text("FS")),
-                    DropdownMenuItem(value: "GCC", child: Text("GCC")),
-                    DropdownMenuItem(value: "Janani", child: Text("Janani")),
-                    // DropdownMenuItem(value: "Local", child: Text("Local")),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedOption = value;
-                    });
-
-                    if (value != null) {
-                      AppConfig.setBaseUrl(value);
-                    }
-
-                    _updateButtonState();
-                  },
-                ),
-
-                const SizedBox(height: 40),
 
                 // Continue button
                 ElevatedButton(
@@ -1571,6 +1540,22 @@ class _MainTabPageState extends State<MainTabPage> {
 
         if (dataList != null && dataList.isNotEmpty) {
           final customerData = dataList[0];
+          final userCode = customerData["code"] ?? "";
+          String organization = "";
+
+          if (userCode.startsWith("FS")) {
+            organization = "FS";
+          } else if (userCode.startsWith("JAN")) {
+            organization = "JAN";
+          } else if (userCode.startsWith("GCC")) {
+            organization = "GCC";
+          }
+
+          AppConfig.setBaseUrl(organization);
+
+          print("API Base URL : ${AppConfig.apiBaseUrl}");
+          print("Local Base URL : ${AppConfig.localBaseUrl}");
+
           final loginSessions =
               customerData['loginSession'] as List<dynamic>? ?? [];
 

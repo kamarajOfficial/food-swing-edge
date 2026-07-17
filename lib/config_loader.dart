@@ -75,7 +75,7 @@ class AppConfig {
         apiBaseUrl = _baseUrls["gcc"];
         break;
 
-      case "janani":
+      case "jan":
         apiBaseUrl = _baseUrls["janani"];
         break;
 

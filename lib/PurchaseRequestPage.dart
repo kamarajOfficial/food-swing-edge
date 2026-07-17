@@ -138,7 +138,7 @@ class _PurchaseRequestPageState extends State<PurchaseRequestPage> {
               crossAxisCount: 2,
               childAspectRatio: 1.0,
               crossAxisSpacing: 2,
-              mainAxisSpacing: 30,
+              mainAxisSpacing: 15,
               children: [
                 _statCard(
                   "Total PR",

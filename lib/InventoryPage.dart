@@ -78,10 +78,8 @@ class InventoryPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PurchaseRequestPage(
-              companyId: companyId,
-              username: username,
-            ),
+            builder: (_) =>
+                PurchaseRequestPage(companyId: companyId, username: username),
           ),
         );
         break;
@@ -90,7 +88,8 @@ class InventoryPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PurchaseOrderPage(companyId: companyId),
+            builder: (_) =>
+                PurchaseOrderPage(companyId: companyId, username: username),
           ),
         );
         break;
