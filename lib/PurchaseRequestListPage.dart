@@ -30,9 +30,9 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
   final List<String> filters = [
     "All",
     "DRAFT",
-    "DENIED",
+    "SUBMITTED",
     "APPROVED",
-    "PARTIAL PO",
+    "REJECTED",
   ];
 
   String selectedFilter = "All";
@@ -138,10 +138,10 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
       case "APPROVED":
         return Colors.green;
 
-      case "PARTIAL PO":
+      case "SUBMITTED":
         return Colors.blue;
 
-      case "DENIED":
+      case "REJECTED":
         return Colors.red;
 
       case "DRAFT":
@@ -870,7 +870,7 @@ class _PurchaseRequestDetailsPageState
                     successMessage: "PR Approved",
                   );
                 },
-                child: const Text("Approve"),
+                child: const Text("Approve", style: TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ),
 
@@ -885,7 +885,7 @@ class _PurchaseRequestDetailsPageState
                     successMessage: "PR Rejected",
                   );
                 },
-                child: const Text("Reject"),
+                child: const Text("Reject", style: TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ),
           ],

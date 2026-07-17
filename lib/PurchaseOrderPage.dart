@@ -1,16 +1,105 @@
 import 'package:flutter/material.dart';
 
 import 'PurchaseRequestCreatePage.dart';
+import 'PurchaseRequestGeneratePage.dart';
 import 'PurchaseRequestListPage.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:foodswing_flutter/config_loader.dart';
 
-class PurchaseOrderPage extends StatelessWidget {
+class PurchaseOrderPage extends StatefulWidget {
   final String companyId;
+  final String username;
 
-  const PurchaseOrderPage({Key? key, required this.companyId})
-      : super(key: key);
+  const PurchaseOrderPage({
+    Key? key,
+    required this.companyId,
+    required this.username,
+  }) : super(key: key);
+
+  @override
+  State<PurchaseOrderPage> createState() => _PurchaseOrderPageState();
+}
+
+class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
+  bool loading = true;
+
+  Map<String, dynamic> dashboard = {};
+
+  List<Map<String, dynamic>> recentPRs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadDashboard();
+  }
+
+  Future<void> loadDashboard() async {
+    final response = await http.get(
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/dashboard"),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      setState(() {
+        dashboard = json["data"] ?? {};
+        recentPRs = List<Map<String, dynamic>>.from(
+          dashboard["recentPOs"] ?? [],
+        );
+        loading = false;
+      });
+    } else {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  double get todayPOValue {
+    double total = 0;
+
+    final today = DateTime.now();
+
+    for (final po in recentPRs) {
+      if (po["grandTotal"] == null || po["orderDate"] == null) continue;
+
+      final date = DateTime.parse(po["orderDate"]);
+
+      if (date.year == today.year &&
+          date.month == today.month &&
+          date.day == today.day) {
+        total += (po["grandTotal"] as num).toDouble();
+      }
+    }
+
+    return total;
+  }
+
+  double get monthlyPOValue {
+    double total = 0;
+
+    final today = DateTime.now();
+
+    for (final po in recentPRs) {
+      if (po["grandTotal"] == null || po["orderDate"] == null) continue;
+
+      final date = DateTime.parse(po["orderDate"]);
+
+      if (date.year == today.year &&
+          date.month == today.month) {
+        total += (po["grandTotal"] as num).toDouble();
+      }
+    }
+
+    return total;
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -33,9 +122,15 @@ class PurchaseOrderPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "PO Dashboard",
+            Text(
+              'Hi, ${widget.username}',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 5),
+
+            Text(
+              "Here's your purchase order overview",
+              style: TextStyle(color: Colors.grey.shade600),
             ),
 
             const SizedBox(height: 12),
@@ -44,21 +139,51 @@ class PurchaseOrderPage extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              childAspectRatio: 1.5,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
+              childAspectRatio: 1.0,
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 15,
               children: [
-                _statCard("Total PO", "28", Colors.blue),
+                _statCard(
+                  "Total PO",
+                  "${dashboard["totalPOs"] ?? 0}",
+                  Colors.blue,
+                  Icons.description_outlined,
+                ),
 
-                _statCard("Pending", "12", Colors.orange),
+                _statCard(
+                  "Draft",
+                  "${dashboard["draftCount"] ?? 0}",
+                  Colors.orange,
+                  Icons.edit_note_outlined,
+                ),
 
-                _statCard("Approved", "10", Colors.green),
+                _statCard(
+                  "Submitted",
+                  "${dashboard["submittedCount"] ?? 0}",
+                  Colors.green,
+                  Icons.verified_outlined,
+                ),
 
-                _statCard("Partially Received", "2", Colors.red),
+                _statCard(
+                  "Approved",
+                  "${dashboard["approvedCount"] ?? 0}",
+                  Colors.green,
+                  Icons.verified_outlined,
+                ),
 
-                _statCard("Received", "4", Colors.green),
+                _statCard(
+                  "Partially Received",
+                  "${dashboard["partiallyReceivedCount"] ?? 0}",
+                  Colors.green,
+                  Icons.verified_outlined,
+                ),
 
-                _statCard("Cancelled", "0", Colors.red),
+                _statCard(
+                  "Closed",
+                  "${dashboard["closedCount"] ?? 0}",
+                  Colors.red,
+                  Icons.cancel_outlined,
+                ),
               ],
             ),
 
@@ -69,7 +194,7 @@ class PurchaseOrderPage extends StatelessWidget {
                 Expanded(
                   child: _valueCard(
                     "Today's PO Value",
-                    "₹2,45,000",
+                    "₹${todayPOValue.toStringAsFixed(2)}",
                     Colors.deepPurple,
                   ),
                 ),
@@ -78,8 +203,8 @@ class PurchaseOrderPage extends StatelessWidget {
 
                 Expanded(
                   child: _valueCard(
-                    "Received Value",
-                    "₹18,75,000",
+                    "Monthly PO Value",
+                    "₹${monthlyPOValue.toStringAsFixed(2)}",
                     Colors.teal,
                   ),
                 ),
@@ -101,13 +226,13 @@ class PurchaseOrderPage extends StatelessWidget {
               crossAxisCount: 4,
               childAspectRatio: .9,
               children: [
-                _actionButton(Icons.add_box, "Create PO", Colors.green, () {
+                _actionButton(Icons.add_box, "Create", Colors.green, () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) =>
-                          PurchaseRequestCreatePage(companyId: companyId),
+                      builder: (_) => PurchaseRequestCreatePage(
+                        companyId: widget.companyId,
+                      ),
                     ),
                   );
                 }),
@@ -116,8 +241,16 @@ class PurchaseOrderPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (_) => PurchaseRequestListPage(companyId: companyId),
+                      builder: (_) =>
+                          PurchaseRequestListPage(companyId: widget.companyId),
+                    ),
+                  );
+                }),
+
+                _actionButton(Icons.report, "Reports", Colors.blue, () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Reports feature coming soon"),
                     ),
                   );
                 }),
@@ -136,81 +269,6 @@ class PurchaseOrderPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  "Recent Purchase Order",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-
-                Text(
-                  "View All",
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.orange.shade100,
-                      child: const Icon(
-                        Icons.description,
-                        color: Colors.orange,
-                      ),
-                    ),
-
-                    title: Text("PR-2026000${index + 1}"),
-
-                    subtitle: const Text("Central Kitchen\n02 Jun 2026"),
-
-                    isThreeLine: true,
-
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "₹45,500",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            "Pending",
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-
             const SizedBox(height: 80),
           ],
         ),
@@ -218,29 +276,46 @@ class PurchaseOrderPage extends StatelessWidget {
     );
   }
 
-  Widget _statCard(String title, String value, Color color) {
+  Widget _statCard(String title, String value, Color color, IconData icon) {
     return Card(
-      elevation: 2,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: color, width: 5)),
-        ),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Container(
+              height: 38,
+              width: 38,
+              decoration: BoxDecoration(
+                color: color.withOpacity(.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+
+            const SizedBox(height: 12),
+
             Text(
               value,
               style: TextStyle(
-                color: color,
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
 
             const SizedBox(height: 6),
 
-            Text(title),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

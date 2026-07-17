@@ -1,4 +1,4 @@
-package com.example.foodswing_flutter
+package com.meteoriqs.foodswing_flutter_app
 
 import io.flutter.embedding.android.FlutterActivity
 
