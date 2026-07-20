@@ -97,4 +97,15 @@ class AppConfig {
 
   static String api(String endpoint) =>
       "$apiBaseUrl$endpoint";
+
+  static List<String> get allBaseUrls => [
+    localBaseUrl,
+    _baseUrls["fsx"],
+    _baseUrls["janani"],
+    _baseUrls["gcc"],
+  ];
+
+  static void setApiBaseUrl(String url) {
+    apiBaseUrl = url;
+  }
 }

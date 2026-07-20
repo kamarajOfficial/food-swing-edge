@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'PurchaseRequestCreatePage.dart';
 import 'PurchaseRequestGeneratePage.dart';
-import 'PurchaseRequestListPage.dart';
+import 'PurchaseOrderListPage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:foodswing_flutter/config_loader.dart';
@@ -242,7 +242,7 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          PurchaseRequestListPage(companyId: widget.companyId),
+                          PurchaseOrderListPage(companyId: widget.companyId),
                     ),
                   );
                 }),

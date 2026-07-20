@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 
-import 'PurchaseRequestDetailsPage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:foodswing_flutter/config_loader.dart';
 
-class PurchaseRequestListPage extends StatefulWidget {
+class PurchaseOrderListPage extends StatefulWidget {
   final String companyId;
 
-  const PurchaseRequestListPage({Key? key, required this.companyId})
+  const PurchaseOrderListPage({Key? key, required this.companyId})
     : super(key: key);
 
   @override
-  State<PurchaseRequestListPage> createState() =>
-      _PurchaseRequestListPageState();
+  State<PurchaseOrderListPage> createState() =>
+      _PurchaseOrderListPageState();
 }
 
-class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
+class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   // final List<String> filters = ["All", "Pending", "Approved", "Rejected"];
 
   final TextEditingController searchController = TextEditingController();
@@ -70,16 +69,16 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
           : searchController.text.trim(),
     };
 
-    print("========== PR SEARCH REQUEST ==========");
+    print("========== PO SEARCH REQUEST ==========");
     print(jsonEncode(body));
 
     final response = await http.post(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/search"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/search"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
 
-    print("========== PR SEARCH RESPONSE ==========");
+    print("========== PO SEARCH RESPONSE ==========");
     print("Status Code: ${response.statusCode}");
     print(response.body);
 
@@ -502,7 +501,7 @@ class _PurchaseRequestDetailsPageState
 
   Future<void> loadPRDetails() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.prId}"),
     );
 
     print("Status Code: ${response.statusCode}");
@@ -530,11 +529,11 @@ class _PurchaseRequestDetailsPageState
       "actionBy": prDetails!["requisition"]["modifiedBy"] ?? "mobile",
     };
     print("========== UPDATE STATUS ==========");
-    print("${AppConfig.apiBaseUrl}/api/pr/$endpoint/${widget.prId}");
+    print("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.prId}");
     print(jsonEncode(body));
 
     final response = await http.put(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/$endpoint/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.prId}"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
@@ -1052,7 +1051,7 @@ class _PurchaseRequestDetailsPageState
     };
 
     final response = await http.put(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/updateDraft/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/updateDraft/${widget.prId}"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
@@ -1300,7 +1299,7 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
 
   Future<void> loadPRDetails() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/pr/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.prId}"),
     );
 
     if (response.statusCode == 200) {

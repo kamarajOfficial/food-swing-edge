@@ -102,7 +102,7 @@ class _EditProfileCustomerState extends State<EditProfileFsCustomer> {
     try {
       final response = await http.get(
         Uri.parse(
-          '${AppConfig.localBaseUrl}/api/getCustomerFsById/${widget.phoneNumber}',
+          '${AppConfig.apiBaseUrl}/api/getCustomerFsById/${widget.phoneNumber}',
         ),
       );
 
@@ -452,7 +452,7 @@ class _EditProfileCustomerState extends State<EditProfileFsCustomer> {
                   try {
                     final response = await http.put(
                       Uri.parse(
-                        "${AppConfig.localBaseUrl}/api/logoutFsUser/$phoneNumber",
+                        "${AppConfig.apiBaseUrl}/api/logoutFsUser/$phoneNumber",
                       ),
                       headers: {"Content-Type": "application/json"},
                     );
