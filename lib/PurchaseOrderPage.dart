@@ -138,10 +138,10 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.0,
-              crossAxisSpacing: 2,
-              mainAxisSpacing: 15,
+              crossAxisCount: 3,
+              childAspectRatio: 0.8,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
               children: [
                 _statCard(
                   "Total PO",
@@ -160,8 +160,8 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
                 _statCard(
                   "Submitted",
                   "${dashboard["submittedCount"] ?? 0}",
-                  Colors.green,
-                  Icons.verified_outlined,
+                  Colors.grey,
+                  Icons.outbox_outlined,
                 ),
 
                 _statCard(
@@ -174,8 +174,8 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
                 _statCard(
                   "Partially Received",
                   "${dashboard["partiallyReceivedCount"] ?? 0}",
-                  Colors.green,
-                  Icons.verified_outlined,
+                  Colors.purple,
+                  Icons.incomplete_circle,
                 ),
 
                 _statCard(
@@ -211,14 +211,14 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
             const Text(
               "Quick Actions",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
 
             GridView.count(
               shrinkWrap: true,
@@ -226,16 +226,16 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
               crossAxisCount: 4,
               childAspectRatio: .9,
               children: [
-                _actionButton(Icons.add_box, "Create", Colors.green, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PurchaseRequestCreatePage(
-                        companyId: widget.companyId,
-                      ),
-                    ),
-                  );
-                }),
+            //     _actionButton(Icons.add_box, "Create", Colors.green, () {
+            //       Navigator.push(
+            //         context,
+            //         MaterialPageRoute(
+            //           builder: (_) => PurchaseRequestCreatePage(
+            //             companyId: widget.companyId,
+            //           ),
+            //         ),
+            //       );
+            //     }),
 
                 _actionButton(Icons.list_alt, "PO List", Colors.blue, () {
                   Navigator.push(
@@ -276,43 +276,55 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
     );
   }
 
-  Widget _statCard(String title, String value, Color color, IconData icon) {
+  Widget _statCard(
+      String title,
+      String value,
+      Color color,
+      IconData icon,
+      ) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 10,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              height: 38,
-              width: 38,
-              decoration: BoxDecoration(
-                color: color.withOpacity(.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-
-            const SizedBox(height: 12),
-
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: color.withOpacity(.12),
+              child: Icon(
+                icon,
                 color: color,
+                size: 18,
               ),
             ),
 
             const SizedBox(height: 6),
 
             Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+
+            const SizedBox(height: 2),
+
+            Text(
               title,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
             ),

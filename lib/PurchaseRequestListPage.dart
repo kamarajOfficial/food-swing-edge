@@ -557,6 +557,81 @@ class _PurchaseRequestDetailsPageState
     }
   }
 
+  Future<void> generatePO() async {
+    final requisition = prDetails!["requisition"];
+
+    final body = {
+      "vendorId": requisition["vendorId"], // Select vendor if not available
+      "kitchenId": requisition["kitchenId"],
+      "companyId": requisition["companyId"],
+      "deliveryAddress": requisition["deliveryAddress"] ?? "",
+      "countryCode": "IN",
+      "currencyCode": "INR",
+      "orderDate": DateTime.now().toIso8601String().split("T")[0],
+      "expectedDeliveryDate":
+      requisition["requiredByDate"] ?? DateTime.now().toIso8601String().split("T")[0],
+      "remarks": requisition["remarks"] ?? "",
+      "taxType": "EXCLUSIVE",
+      "taxPercentage": 0,
+      "shippingAmount": 0,
+      "otherCharges": 0,
+      "actionBy": requisition["modifiedBy"] ?? "mobile",
+
+      "items": ingredients.map((item) {
+        return {
+          "prIngredientId": item["id"],
+          "ingredientId": item["ingredientId"],
+          "ingredientName":
+          ingredientMap[item["ingredientId"]]?["name"] ?? "",
+          "ingredientTypeId": item["ingredientTypeId"],
+          "ingredientTypeName": item["ingredientTypeName"],
+          "uomId": item["uomId"],
+          "uomName": item["uomName"],
+          "requiredQty": item["requiredQty"],
+          "orderedQty": item["requiredQty"],
+          "unitPrice": item["estimatedUnitPrice"],
+          "discountPercentage": 0,
+          "taxType": "EXCLUSIVE",
+          "taxPercentage": 0,
+          "taxInclusive": false,
+          "taxSource": "NONE",
+          "remarks": ""
+        };
+      }).toList()
+    };
+
+    print("========= GENERATE PO =========");
+    print(jsonEncode(body));
+
+    final response = await http.post(
+      Uri.parse(
+          "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.prId}"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    print(response.statusCode);
+    print(response.body);
+
+    if (response.statusCode == 201) {
+      final json = jsonDecode(response.body);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(json["status"]["message"]),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.body)),
+      );
+    }
+  }
+
   String formatDate(String date) {
     final d = DateTime.parse(date);
 
@@ -896,9 +971,7 @@ class _PurchaseRequestDetailsPageState
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFF15F28),
           ),
-          onPressed: () {
-            // Navigate Generate PO
-          },
+          onPressed: generatePO,
           child: const Text("Generate PO"),
         );
 
