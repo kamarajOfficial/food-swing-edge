@@ -155,7 +155,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("PR List"),
+        title: const Text("PO List"),
         backgroundColor: const Color(0xFF010440),
         foregroundColor: Colors.white,
       ),
@@ -174,7 +174,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
               controller: searchController,
               onChanged: searchPR,
               decoration: InputDecoration(
-                hintText: "Search PR Number, Source, Kitchen...",
+                hintText: "Search PO Number, Source, Kitchen...",
                 hintStyle: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -685,7 +685,7 @@ class _PurchaseRequestDetailsPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("PR List"),
+        title: Text("PO List"),
         backgroundColor: const Color(0xFF010440),
         foregroundColor: Colors.white,
       ),

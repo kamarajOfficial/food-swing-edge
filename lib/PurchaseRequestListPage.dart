@@ -1171,6 +1171,18 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
     });
   }
 
+  Map<int, List<Map<String, dynamic>>> get groupedItems {
+    final Map<int, List<Map<String, dynamic>>> map = {};
+
+    for (final item in eligibleLines) {
+      final typeId = item["ingredientTypeId"];
+
+      map.putIfAbsent(typeId, () => []);
+      map[typeId]!.add(item);
+    }
+
+    return map;
+  }
   Future<void> generatePO() async {
     final selectedItems = eligibleLines
         .where((e) => e["selected"] == true)
@@ -1333,11 +1345,12 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
 
   Map<int, List<dynamic>> vendors = {};
 
+  Map<int, int?> selectedVendor = {};
+
   Future<void> loadVendors() async {
     vendors.clear();
 
     final types = eligibleLines
-        .where((e) => e["selected"])
         .map((e) => e["ingredientTypeId"])
         .toSet();
 
@@ -1388,72 +1401,114 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
         ),
       ),
 
-      body: ListView.builder(
-        itemCount: eligibleLines.length,
-        itemBuilder: (context, index) {
-          final item = eligibleLines[index];
+      body: ListView(
+        children: groupedItems.entries.map((entry) {
+
+          final typeId = entry.key;
+          final items = entry.value;
+          final typeName = items.first["ingredientTypeName"];
 
           return Card(
-            margin: const EdgeInsets.all(8),
+            margin: const EdgeInsets.all(5),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CheckboxListTile(
-                    value: item["selected"],
-                    onChanged: (v) async {
-                      setState(() {
-                        item["selected"] = v ?? false;
-                      });
-                      await loadVendors();
-                    },
-                    title: Text(item["ingredientName"]),
-                    subtitle: Text(
-                      "${item["remainingQty"]} ${item["uomName"] ?? ""}",
-                    ),
-                    secondary: Text("₹${item["estimatedUnitPrice"]}"),
-                  ),
 
-                  DropdownButtonFormField<int>(
-                    value: item["vendorId"],
-                    decoration: const InputDecoration(
-                      labelText: "Select Vendor",
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
                     ),
-                    items: (vendors[item["ingredientTypeId"]] ?? [])
-                        .map<DropdownMenuItem<int>>((vendor) {
-                          return DropdownMenuItem<int>(
-                            value: vendor["vendorId"],
-                            child: Text(vendor["vendorName"]),
-                          );
-                        })
-                        .toList(),
-                    onChanged: (value) {
-                      final vendor = (vendors[item["ingredientTypeId"]] ?? [])
-                          .firstWhere((v) => v["vendorId"] == value);
-
-                      if ((item["remainingQty"] as num).toDouble() <
-                          (vendor["minQty"] as num).toDouble()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              "Minimum order for ${item["ingredientName"]} is ${vendor["minQty"]}",
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF15F28).withOpacity(0.12),
+                      border: Border.all(
+                        color: const Color(0xFFF15F28),
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.category,
+                          color: Color(0xFFF15F28),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            typeName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF15F28),
                             ),
                           ),
-                        );
+                        ),
+                      ],
+                    ),
+                  ),
 
-                        return;
-                      }
+                  const SizedBox(height: 10),
+
+                  DropdownButtonFormField<int>(
+                    value: selectedVendor[typeId],
+                    decoration: const InputDecoration(
+                      labelText: "Vendor",
+                    ),
+                    items: (vendors[typeId] ?? [])
+                        .map<DropdownMenuItem<int>>((vendor) {
+                      return DropdownMenuItem(
+                        value: vendor["vendorId"],
+                        child: Text(vendor["vendorName"]),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
 
                       setState(() {
-                        item["vendorId"] = value;
+
+                        selectedVendor[typeId] = value;
+
+                        for (final item in items) {
+                          item["vendorId"] = value;
+                        }
+
                       });
+
                     },
                   ),
+
+                  const SizedBox(height: 8),
+
+                  ...items.map((item) {
+
+                    return CheckboxListTile(
+                      dense: true,
+                      value: item["selected"],
+                      onChanged: (v) {
+
+                        setState(() {
+                          item["selected"] = v ?? false;
+                        });
+
+                      },
+                      title: Text(item["ingredientName"]),
+                      subtitle: Text(
+                          "Qty : ${item["remainingQty"]}"
+                      ),
+                    );
+
+                  }).toList(),
+
                 ],
               ),
             ),
           );
-        },
+
+        }).toList(),
       ),
     );
   }
