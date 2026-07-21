@@ -478,7 +478,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
       }
     }
 
-    final body = {"remarks": remarksController.text, "actionBy": "PR"};
+    final body = {"remarks": remarksController.text, "actionBy": "Mobile PR"};
 
     final response = await http.put(
       Uri.parse("${AppConfig.apiBaseUrl}/api/pr/submit/$createdPrId"),
@@ -544,9 +544,9 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
 
       "priority": "Medium",
       "requestType": "Manual",
-      "source": "Production Plan",
+      "source": source,
       "remarks": remarksController.text,
-      "actionBy": "PR",
+      "actionBy": "Mobile PR",
 
       "ingredients": selectedIngredients.map((e) {
         return {
@@ -602,6 +602,105 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
         context,
       ).showSnackBar(SnackBar(content: Text(response.body)));
     }
+  }
+
+  void openMealDialog() async {
+    List<int> tempSelected = List.from(selectedMealIds);
+
+    await showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            contentPadding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+
+            title: Column(
+              children: [
+                const Text(
+                  "Select Meal",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+
+                const SizedBox(height: 10),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setStateDialog(() {
+                          tempSelected = meals
+                              .map<int>((e) => e["id"] as int)
+                              .toList();
+                        });
+                      },
+                      child: const Text("Select All"),
+                    ),
+
+                    TextButton(
+                      onPressed: () {
+                        setStateDialog(() {
+                          tempSelected.clear();
+                        });
+                      },
+                      child: const Text("Clear"),
+                    ),
+                  ],
+                ),
+
+                const Divider(height: 1),
+              ],
+            ),
+
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 350,
+              child: ListView.builder(
+                itemCount: meals.length,
+                itemBuilder: (_, index) {
+                  final meal = meals[index];
+
+                  return CheckboxListTile(
+                    dense: true,
+                    value: tempSelected.contains(meal["id"]),
+                    title: Text(meal["name"]),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        if (value!) {
+                          tempSelected.add(meal["id"]);
+                        } else {
+                          tempSelected.remove(meal["id"]);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    selectedMealIds = List.from(tempSelected);
+                  });
+
+                  Navigator.pop(context);
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -697,13 +796,18 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                     items: const [
                       DropdownMenuItem(
                         value: "Production Plan",
-                        child: Text(
-                          "Production Plan",
-                          style: TextStyle(fontSize: 13),
-                        ),
+                        child: Text("Production Plan"),
+                      ),
+                      DropdownMenuItem(
+                        value: "Manual Requisition",
+                        child: Text("Manual Requisition"),
                       ),
                     ],
-                    onChanged: (v) => setState(() => source = v!),
+                    onChanged: (value) {
+                      setState(() {
+                        source = value!;
+                      });
+                    },
                   ),
 
                   const SizedBox(height: 12),
@@ -804,41 +908,36 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
                       const SizedBox(width: 8),
 
                       Expanded(
-                        child: MultiSelectDialogField<int>(
-                          items: meals.map((meal) {
-                            return MultiSelectItem<int>(
-                              meal["id"],
-                              meal["name"],
-                            );
-                          }).toList(),
+                        child: InkWell(
+                          onTap: openMealDialog,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.fastfood, size: 18),
+                                const SizedBox(width: 8),
 
-                          title: const Text("Meal"),
-                          searchable: true,
+                                Expanded(
+                                  child: Text(
+                                    selectedMealIds.isEmpty
+                                        ? "Meal"
+                                        : "${selectedMealIds.length} Selected",
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ),
 
-                          initialValue: selectedMealIds,
-
-                          buttonText: Text(
-                            selectedMealIds.isEmpty
-                                ? "Meal"
-                                : "${selectedMealIds.length} Selected",
-                            style: const TextStyle(fontSize: 13),
+                                const Icon(Icons.arrow_drop_down),
+                              ],
+                            ),
                           ),
-
-                          buttonIcon: const Icon(Icons.fastfood, size: 18),
-
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-
-                          chipDisplay: MultiSelectChipDisplay.none(),
-
-                          onConfirm: (values) {
-                            setState(() {
-                              selectedMealIds = values;
-                            });
-                          },
                         ),
                       ),
                     ],

@@ -123,6 +123,7 @@ class _PurchaseRequestGeneratePageState
             mealIds: mealIds,
             kitchenIds: kitchenIds,
             companyId: widget.companyId,
+            source: source,
           ),
         ),
       );
@@ -154,6 +155,197 @@ class _PurchaseRequestGeneratePageState
         }
       });
     }
+  }
+
+  void openMealDialog() async {
+    List<Map<String, dynamic>> tempSelected = List.from(selectedMeals);
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Select Meal"),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 420,
+                child: Column(
+                  children: [
+                    /// Select All & Clear
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setStateDialog(() {
+                              tempSelected = List.from(meals);
+                            });
+                          },
+                          child: const Text("Select All"),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setStateDialog(() {
+                              tempSelected.clear();
+                            });
+                          },
+                          child: const Text("Clear"),
+                        ),
+                      ],
+                    ),
+
+                    const Divider(),
+
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: meals.length,
+                        itemBuilder: (context, index) {
+                          final meal = meals[index];
+
+                          final selected = tempSelected.any(
+                                (e) => e["id"] == meal["id"],
+                          );
+
+                          return CheckboxListTile(
+                            value: selected,
+                            title: Text(meal["name"]),
+                            controlAffinity:
+                            ListTileControlAffinity.leading,
+                            onChanged: (value) {
+                              setStateDialog(() {
+                                if (value!) {
+                                  tempSelected.add(meal);
+                                } else {
+                                  tempSelected.removeWhere(
+                                        (e) => e["id"] == meal["id"],
+                                  );
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  child: const Text("OK"),
+                  onPressed: () {
+                    setState(() {
+                      selectedMeals = List.from(tempSelected);
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void openKitchenDialog() async {
+    List<Map<String, dynamic>> tempSelected = List.from(selectedKitchens);
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Select Kitchen"),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 420,
+                child: Column(
+                  children: [
+
+                    /// Select All & Clear
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setStateDialog(() {
+                              tempSelected = List.from(kitchens);
+                            });
+                          },
+                          child: const Text("Select All"),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setStateDialog(() {
+                              tempSelected.clear();
+                            });
+                          },
+                          child: const Text("Clear"),
+                        ),
+                      ],
+                    ),
+
+                    const Divider(),
+
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: kitchens.length,
+                        itemBuilder: (context, index) {
+                          final kitchen = kitchens[index];
+
+                          final selected = tempSelected.any(
+                                (e) => e["id"] == kitchen["id"],
+                          );
+
+                          return CheckboxListTile(
+                            value: selected,
+                            title: Text(kitchen["name"]),
+                            controlAffinity:
+                            ListTileControlAffinity.leading,
+                            onChanged: (value) {
+                              setStateDialog(() {
+                                if (value!) {
+                                  tempSelected.add(kitchen);
+                                } else {
+                                  tempSelected.removeWhere(
+                                        (e) => e["id"] == kitchen["id"],
+                                  );
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  child: const Text("OK"),
+                  onPressed: () {
+                    setState(() {
+                      selectedKitchens = List.from(tempSelected);
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -211,12 +403,17 @@ class _PurchaseRequestGeneratePageState
                   value: "Production Plan",
                   child: Text("Production Plan"),
                 ),
+                DropdownMenuItem(
+                  value: "Manual Requisition",
+                  child: Text("Manual Requisition"),
+                ),
               ],
-              onChanged: (v) {
-                setState(() => source = v!);
+              onChanged: (value) {
+                setState(() {
+                  source = value!;
+                });
               },
             ),
-
             const SizedBox(height: 18),
 
             Row(
@@ -345,32 +542,32 @@ class _PurchaseRequestGeneratePageState
 
             const SizedBox(height: 6),
 
-            MultiSelectDialogField<Map<String, dynamic>>(
-              items: kitchens
-                  .map((e) => MultiSelectItem(e, e["name"]))
-                  .toList(),
-              initialValue: selectedKitchens,
-              searchable: true,
-              chipDisplay: MultiSelectChipDisplay.none(),
-              title: const Text("Kitchen"),
-              buttonText: Text(
-                selectedKitchens.isEmpty
-                    ? "Select Kitchen"
-                    : selectedKitchens.length == 1
-                    ? selectedKitchens.first["name"]
-                    : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
+            InkWell(
+              onTap: openKitchenDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.restaurant_menu),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        selectedKitchens.isEmpty
+                            ? "Select Kitchen"
+                            : selectedKitchens.length == 1
+                            ? selectedKitchens.first["name"]
+                            : "${selectedKitchens.first["name"]} +${selectedKitchens.length - 1}",
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
               ),
-              buttonIcon: const Icon(Icons.restaurant_menu),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onConfirm: (values) {
-                setState(() {
-                  selectedKitchens = values;
-                });
-              },
             ),
 
             const SizedBox(height: 18),
@@ -383,30 +580,37 @@ class _PurchaseRequestGeneratePageState
 
             const SizedBox(height: 6),
 
-            MultiSelectDialogField<Map<String, dynamic>>(
-              items: meals.map((e) => MultiSelectItem(e, e["name"])).toList(),
-              searchable: true,
-              initialValue: selectedMeals,
-              chipDisplay: MultiSelectChipDisplay.none(),
-              title: const Text("Meal"),
-              buttonText: Text(
-                selectedMeals.isEmpty
-                    ? "Select Meal"
-                    : selectedMeals.length == 1
-                    ? selectedMeals.first["name"]
-                    : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
+            InkWell(
+              onTap: openMealDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 15,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.fastfood_outlined),
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: Text(
+                        selectedMeals.isEmpty
+                            ? "Select Meal"
+                            : selectedMeals.length == 1
+                            ? selectedMeals.first["name"]
+                            : "${selectedMeals.first["name"]} +${selectedMeals.length - 1}",
+                      ),
+                    ),
+
+                    const Icon(Icons.arrow_drop_down),
+                  ],
+                ),
               ),
-              buttonIcon: const Icon(Icons.fastfood_outlined),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onConfirm: (values) {
-                setState(() {
-                  selectedMeals = values;
-                });
-              },
             ),
 
             const SizedBox(height: 32),
@@ -456,6 +660,7 @@ class PurchaseRequestPreviewPage extends StatefulWidget {
   final String mealIds;
   final String kitchenIds;
   final String companyId;
+  final String source;
 
   const PurchaseRequestPreviewPage({
     Key? key,
@@ -465,6 +670,7 @@ class PurchaseRequestPreviewPage extends StatefulWidget {
     required this.mealIds,
     required this.kitchenIds,
     required this.companyId,
+    required this.source,
   }) : super(key: key);
 
   @override
@@ -541,11 +747,11 @@ class _PurchaseRequestPreviewPageState
       "fromDate": widget.fromDate,
       "toDate": widget.toDate,
       "requiredByDate": widget.toDate,
-      "priority": "Medium",
-      "requestType": "Manual",
-      "source": "Production Plan",
+      "priority": "High",
+      "requestType": "Automation",
+      "source": widget.source,
       "remarks": "",
-      "actionBy": "PR",
+      "actionBy": "Mobile PR",
 
       "ingredients": ingredients.map((e) {
         return {
@@ -564,7 +770,7 @@ class _PurchaseRequestPreviewPageState
           "requiredQty": e["quantity"],
           "estimatedUnitPrice": e["unitRate"],
           "estimatedAmount":
-          ((e["quantity"] ?? 0) as num).toDouble() *
+              ((e["quantity"] ?? 0) as num).toDouble() *
               ((e["unitRate"] ?? 0) as num).toDouble(),
           "netRequiredQty": e["netRequiredQty"],
           // "estimatedUnitPrice": e["estimatedUnitPrice"],

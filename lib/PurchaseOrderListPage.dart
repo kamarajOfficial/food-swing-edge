@@ -11,8 +11,7 @@ class PurchaseOrderListPage extends StatefulWidget {
     : super(key: key);
 
   @override
-  State<PurchaseOrderListPage> createState() =>
-      _PurchaseOrderListPageState();
+  State<PurchaseOrderListPage> createState() => _PurchaseOrderListPageState();
 }
 
 class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
@@ -60,11 +59,11 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
     final body = {
       "page": 1,
       "size": 100,
-      "companyId": int.parse(widget.companyId),
+      // "companyId": int.parse(widget.companyId),
       "status": status.isEmpty ? null : status,
       // "fromDate": formatDate(fromDate),
       // "toDate": formatDate(toDate),
-      "prNumber": searchController.text.trim().isEmpty
+      "poNumber": searchController.text.trim().isEmpty
           ? null
           : searchController.text.trim(),
     };
@@ -101,7 +100,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   void searchPR(String value) {
     setState(() {
       filteredList = prList.where((e) {
-        return e["prNumber"].toString().toLowerCase().contains(
+        return e["poNumber"].toString().toLowerCase().contains(
           value.toLowerCase(),
         );
       }).toList();
@@ -174,7 +173,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
               controller: searchController,
               onChanged: searchPR,
               decoration: InputDecoration(
-                hintText: "Search PO Number, Source, Kitchen...",
+                hintText: "Search PO Number",
                 hintStyle: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -276,7 +275,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
                             MaterialPageRoute(
                               builder: (_) => PurchaseRequestDetailsPage(
                                 companyId: widget.companyId,
-                                prId: item["prId"],
+                                poId: item["poId"],
                               ),
                             ),
                           );
@@ -306,7 +305,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      item["prNumber"],
+                                      item["poNumber"],
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
@@ -352,7 +351,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
 
                                   Expanded(
                                     child: Text(
-                                      "${item["source"]}   •   ${item["kitchenName"]}   •   ${item["mealNames"]}",
+                                      "${item["prNumber"]}   •   ${item["kitchenName"]}   •   ${item["vendorName"]}",
                                       style: TextStyle(
                                         color: Colors.grey.shade700,
                                         fontSize: 13,
@@ -376,7 +375,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
                                   const SizedBox(width: 5),
 
                                   Text(
-                                    "${item["fromDate"]}  -  ${item["toDate"]}",
+                                    "${item["orderDate"]}  -  ${item["expectedDeliveryDate"]}",
                                     style: TextStyle(
                                       color: Colors.grey.shade700,
                                       fontSize: 13,
@@ -398,16 +397,15 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
 
                                   const SizedBox(width: 5),
 
-                                  Text(
-                                    "${item["totalItems"] ?? 0} Items",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-
-                                  const SizedBox(width: 20),
-
+                                  // Text(
+                                  //   "${item["totalItems"] ?? 0} Items",
+                                  //   style: TextStyle(
+                                  //     color: Colors.grey.shade700,
+                                  //     fontSize: 13,
+                                  //   ),
+                                  // ),
+                                  //
+                                  // const SizedBox(width: 20),
                                   const Icon(
                                     Icons.currency_rupee,
                                     size: 15,
@@ -415,7 +413,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
                                   ),
 
                                   Text(
-                                    "${item["estimatedAmount"] ?? 0}",
+                                    "${item["grandTotal"] ?? 0}",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
@@ -438,12 +436,12 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
 
 class PurchaseRequestDetailsPage extends StatefulWidget {
   final String companyId;
-  final int prId;
+  final int poId;
 
   const PurchaseRequestDetailsPage({
     Key? key,
     required this.companyId,
-    required this.prId,
+    required this.poId,
   }) : super(key: key);
 
   @override
@@ -468,7 +466,7 @@ class _PurchaseRequestDetailsPageState
   }
 
   Future<void> loadAll() async {
-    await Future.wait([loadIngredients(), loadPRDetails()]);
+    await Future.wait([loadIngredients(), loadPODetails()]);
 
     if (mounted) {
       setState(() {
@@ -499,23 +497,20 @@ class _PurchaseRequestDetailsPageState
     }
   }
 
-  Future<void> loadPRDetails() async {
+  Future<void> loadPODetails() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.poId}"),
     );
-
-    print("Status Code: ${response.statusCode}");
-    print(response.body);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      prDetails = json["data"];
+      prDetails = json["data"]["purchaseOrder"];
 
       ingredients = List<Map<String, dynamic>>.from(
-        json["data"]["ingredients"],
+        json["data"]["items"] ?? [],
       );
-    } else {
+
       setState(() {});
     }
   }
@@ -526,14 +521,14 @@ class _PurchaseRequestDetailsPageState
   }) async {
     final body = {
       "remarks": "",
-      "actionBy": prDetails!["requisition"]["modifiedBy"] ?? "mobile",
+      "actionBy": prDetails!["modifiedBy"] ?? "mobile",
     };
     print("========== UPDATE STATUS ==========");
-    print("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.prId}");
+    print("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.poId}");
     print(jsonEncode(body));
 
     final response = await http.put(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/$endpoint/${widget.poId}"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
@@ -557,25 +552,26 @@ class _PurchaseRequestDetailsPageState
   }
 
   Future<void> generatePO() async {
-    final requisition = prDetails!["requisition"];
+    final po = prDetails!;
+    final status = po["status"];
 
     final body = {
-      "vendorId": requisition["vendorId"], // Select vendor if not available
-      "kitchenId": requisition["kitchenId"],
-      "companyId": requisition["companyId"],
-      "deliveryAddress": requisition["deliveryAddress"] ?? "",
+      "vendorId": po["vendorId"], // Select vendor if not available
+      "kitchenId": po["kitchenId"],
+      "companyId": po["companyId"],
+      "deliveryAddress": po["deliveryAddress"] ?? "",
       "countryCode": "IN",
       "currencyCode": "INR",
       "orderDate": DateTime.now().toIso8601String().split("T")[0],
       "expectedDeliveryDate":
-          requisition["requiredByDate"] ??
+          po["requiredByDate"] ??
           DateTime.now().toIso8601String().split("T")[0],
-      "remarks": requisition["remarks"] ?? "",
+      "remarks": po["remarks"] ?? "",
       "taxType": "EXCLUSIVE",
       "taxPercentage": 0,
       "shippingAmount": 0,
       "otherCharges": 0,
-      "actionBy": requisition["modifiedBy"] ?? "mobile",
+      "actionBy": po["modifiedBy"] ?? "mobile",
 
       "items": ingredients.map((item) {
         return {
@@ -604,7 +600,7 @@ class _PurchaseRequestDetailsPageState
 
     final response = await http.post(
       Uri.parse(
-        "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.prId}",
+        "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.poId}",
       ),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
@@ -665,7 +661,7 @@ class _PurchaseRequestDetailsPageState
     double amount = 0;
 
     for (var item in ingredients) {
-      amount += ((item["estimatedAmount"] ?? 0) as num).toDouble();
+      amount += ((item["lineTotal"] ?? 0) as num).toDouble();
     }
 
     return amount;
@@ -680,8 +676,8 @@ class _PurchaseRequestDetailsPageState
     if (prDetails == null) {
       return const Scaffold(body: Center(child: Text("No Data Found")));
     }
-    final requisition = prDetails!["requisition"];
-    final status = requisition["status"];
+    final po = prDetails!;
+    final status = po["status"];
 
     return Scaffold(
       appBar: AppBar(
@@ -707,7 +703,7 @@ class _PurchaseRequestDetailsPageState
                       children: [
                         Expanded(
                           child: Text(
-                            requisition["prNumber"],
+                            po["poNumber"],
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -725,7 +721,7 @@ class _PurchaseRequestDetailsPageState
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            requisition["status"],
+                            po["status"],
                             style: TextStyle(
                               color: Colors.green.shade700,
                               fontWeight: FontWeight.bold,
@@ -738,7 +734,7 @@ class _PurchaseRequestDetailsPageState
 
                     const SizedBox(height: 18),
 
-                    detailRow("Source", requisition["source"] ?? ""),
+                    detailRow("Vendor", po["vendorName"] ?? ""),
 
                     detailRow(
                       "Kitchen",
@@ -749,19 +745,18 @@ class _PurchaseRequestDetailsPageState
                     //   "Meal",
                     //   "Dinner", // API meal name
                     // ),
+                    detailRow("Order Date", formatDate(po["orderDate"])),
+
                     detailRow(
-                      "Date Range",
-                      "${formatDate(requisition["fromDate"])} - ${formatDate(requisition["toDate"])}",
+                      "Expected Delivery",
+                      formatDate(po["expectedDeliveryDate"]),
                     ),
 
-                    detailRow("Created By", requisition["createdBy"]),
+                    detailRow("Created By", po["createdBy"]),
 
                     detailRow(
                       "Created On",
-                      requisition["createdAt"].toString().replaceFirst(
-                        "T",
-                        " ",
-                      ),
+                      po["createdAt"].toString().replaceFirst("T", " "),
                     ),
                   ],
                 ),
@@ -781,10 +776,7 @@ class _PurchaseRequestDetailsPageState
                 child: Row(
                   children: [
                     Expanded(
-                      child: summary(
-                        requisition["totalItems"].toString(),
-                        "Items",
-                      ),
+                      child: summary(ingredients.length.toString(), "Items"),
                     ),
 
                     Container(
@@ -817,20 +809,33 @@ class _PurchaseRequestDetailsPageState
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        showItems = !showItems;
-                      });
-                    },
-                    child: Text(showItems ? "Hide Items" : "View Items"),
+                Expanded(child: buildActionButton(status)),
+
+                const SizedBox(width: 10),
+
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    setState(() {
+                      showItems = !showItems;
+                    });
+                  },
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      showItems
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      color: const Color(0xFFF15F28),
+                      size: 20,
+                    ),
                   ),
                 ),
-
-                const SizedBox(width: 12),
-
-                Expanded(child: buildActionButton(status)),
               ],
             ),
 
@@ -874,11 +879,12 @@ class _PurchaseRequestDetailsPageState
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            "₹${item["estimatedAmount"]}",
+                            "₹${item["lineTotal"]}",
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
+
                           Text(
-                            "Rate ₹${item["estimatedUnitPrice"]}",
+                            "Rate ₹${item["unitPrice"]}",
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 11,
@@ -943,7 +949,7 @@ class _PurchaseRequestDetailsPageState
                 },
                 child: const Text(
                   "Approve",
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
@@ -961,7 +967,7 @@ class _PurchaseRequestDetailsPageState
                 },
                 child: const Text(
                   "Reject",
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
@@ -978,7 +984,7 @@ class _PurchaseRequestDetailsPageState
               context,
               MaterialPageRoute(
                 builder: (_) => GeneratePurchaseOrderPage(
-                  prId: widget.prId,
+                  poId: widget.poId,
                   // requisition: requisition,
                 ),
               ),
@@ -1051,7 +1057,7 @@ class _PurchaseRequestDetailsPageState
     };
 
     final response = await http.put(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/updateDraft/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/updateDraft/${widget.poId}"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
@@ -1139,13 +1145,13 @@ class _PurchaseRequestDetailsPageState
 }
 
 class GeneratePurchaseOrderPage extends StatefulWidget {
-  final int prId;
+  final int poId;
 
   // final Map<String, dynamic> requisition;
 
   const GeneratePurchaseOrderPage({
     super.key,
-    required this.prId,
+    required this.poId,
     // required this.requisition,
   });
 
@@ -1163,7 +1169,7 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
   void initState() {
     super.initState();
 
-    loadPRDetails();
+    loadPODetails();
 
     loadEligibleLines().then((_) {
       loadVendors();
@@ -1272,7 +1278,7 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
 
     final response = await http.post(
       Uri.parse(
-        "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.prId}",
+        "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.poId}",
       ),
 
       headers: {"Content-Type": "application/json"},
@@ -1297,9 +1303,9 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
     }
   }
 
-  Future<void> loadPRDetails() async {
+  Future<void> loadPODetails() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/${widget.poId}"),
     );
 
     if (response.statusCode == 200) {
@@ -1311,7 +1317,7 @@ class _GeneratePurchaseOrderPageState extends State<GeneratePurchaseOrderPage> {
 
   Future<void> loadEligibleLines() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/eligible-lines/${widget.prId}"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/eligible-lines/${widget.poId}"),
     );
 
     if (response.statusCode == 200) {

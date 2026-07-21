@@ -61,7 +61,7 @@ class _PurchaseRequestListPageState extends State<PurchaseRequestListPage> {
     final body = {
       "page": 1,
       "size": 100,
-      "companyId": int.parse(widget.companyId),
+      // "companyId": int.parse(widget.companyId),
       "status": status.isEmpty ? null : status,
       // "fromDate": formatDate(fromDate),
       // "toDate": formatDate(toDate),
@@ -819,19 +819,34 @@ class _PurchaseRequestDetailsPageState
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        showItems = !showItems;
-                      });
-                    },
-                    child: Text(showItems ? "Hide Items" : "View Items"),
-                  ),
+                  child: buildActionButton(status),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
 
-                Expanded(child: buildActionButton(status)),
+                InkWell(
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () {
+                    setState(() {
+                      showItems = !showItems;
+                    });
+                  },
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      showItems
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      color: const Color(0xFFF15F28),
+                      size: 20,
+                    ),
+                  ),
+                ),
               ],
             ),
 
@@ -944,7 +959,7 @@ class _PurchaseRequestDetailsPageState
                 },
                 child: const Text(
                   "Approve",
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
@@ -962,7 +977,7 @@ class _PurchaseRequestDetailsPageState
                 },
                 child: const Text(
                   "Reject",
-                  style: TextStyle(color: Colors.white, fontSize: 10),
+                  style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ),
