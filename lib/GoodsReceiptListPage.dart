@@ -1,21 +1,20 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:foodswing_flutter/config_loader.dart';
 
-class PurchaseOrderListPage extends StatefulWidget {
+class GoodsReceiptListPage extends StatefulWidget {
   final String companyId;
 
-  const PurchaseOrderListPage({Key? key, required this.companyId})
-    : super(key: key);
+  const GoodsReceiptListPage({Key? key, required this.companyId})
+      : super(key: key);
 
   @override
-  State<PurchaseOrderListPage> createState() => _PurchaseOrderListPageState();
+  State<GoodsReceiptListPage> createState() => _GoodsReceiptListPageState();
 }
 
-class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
+class _GoodsReceiptListPageState extends State<GoodsReceiptListPage> {
   // final List<String> filters = ["All", "Pending", "Approved", "Rejected"];
 
   final TextEditingController searchController = TextEditingController();
@@ -32,7 +31,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
     "SUBMITTED",
     "APPROVED",
     "REJECTED",
-    "ACKNOWLEDGED",
+    "ACKNOWLEDGED"
   ];
 
   String selectedFilter = "All";
@@ -65,21 +64,21 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
       "status": status.isEmpty ? null : status,
       // "fromDate": formatDate(fromDate),
       // "toDate": formatDate(toDate),
-      "poNumber": searchController.text.trim().isEmpty
+      "grnNumber": searchController.text.trim().isEmpty
           ? null
           : searchController.text.trim(),
     };
 
-    print("========== PO SEARCH REQUEST ==========");
+    print("========== GRN SEARCH REQUEST ==========");
     print(jsonEncode(body));
 
     final response = await http.post(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/po/search"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/grn/search"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
 
-    print("========== PO SEARCH RESPONSE ==========");
+    print("========== GRN SEARCH RESPONSE ==========");
     print("Status Code: ${response.statusCode}");
     print(response.body);
 
@@ -102,7 +101,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   void searchPR(String value) {
     setState(() {
       filteredList = prList.where((e) {
-        return e["poNumber"].toString().toLowerCase().contains(
+        return e["grnNumber"].toString().toLowerCase().contains(
           value.toLowerCase(),
         );
       }).toList();
@@ -159,7 +158,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("PO List"),
+        title: const Text("GRN List"),
         backgroundColor: const Color(0xFF010440),
         foregroundColor: Colors.white,
       ),
@@ -178,7 +177,7 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
               controller: searchController,
               onChanged: searchPR,
               decoration: InputDecoration(
-                hintText: "Search PO Number",
+                hintText: "Search GRN Number",
                 hintStyle: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade500,
@@ -267,171 +266,171 @@ class _PurchaseOrderListPageState extends State<PurchaseOrderListPage> {
             child: loading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
-                    itemCount: filteredList.length,
+              itemCount: filteredList.length,
 
-                    itemBuilder: (context, index) {
-                      final item = filteredList[index];
+              itemBuilder: (context, index) {
+                final item = filteredList[index];
 
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PurchaseRequestDetailsPage(
-                                companyId: widget.companyId,
-                                poId: item["poId"],
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PurchaseRequestDetailsPage(
+                          companyId: widget.companyId,
+                          poId: item["grnId"],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(.12),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        /// PR Number + Status
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item["grnNumber"],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(.12),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              /// PR Number + Status
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item["poNumber"],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ),
-
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: getStatusColor(
-                                        item["status"],
-                                      ).withOpacity(.12),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      item["status"],
-                                      style: TextStyle(
-                                        color: getStatusColor(item["status"]),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              decoration: BoxDecoration(
+                                color: getStatusColor(
+                                  item["status"],
+                                ).withOpacity(.12),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-
-                              const SizedBox(height: 10),
-
-                              /// Source | Kitchen | Meal
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.inventory_2_outlined,
-                                    size: 15,
-                                    color: Colors.grey,
-                                  ),
-
-                                  const SizedBox(width: 5),
-
-                                  Expanded(
-                                    child: Text(
-                                      "${item["prNumber"]}   •   ${item["kitchenName"]}   •   ${item["vendorName"]}",
-                                      style: TextStyle(
-                                        color: Colors.grey.shade700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                item["status"],
+                                style: TextStyle(
+                                  color: getStatusColor(item["status"]),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
                               ),
-
-                              const SizedBox(height: 8),
-
-                              /// Date
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today_outlined,
-                                    size: 15,
-                                    color: Colors.grey,
-                                  ),
-
-                                  const SizedBox(width: 5),
-
-                                  Text(
-                                    "${item["orderDate"]}  -  ${item["expectedDeliveryDate"]}",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              /// Items + Amount
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.shopping_basket_outlined,
-                                    size: 15,
-                                    color: Colors.grey,
-                                  ),
-
-                                  const SizedBox(width: 5),
-
-                                  // Text(
-                                  //   "${item["totalItems"] ?? 0} Items",
-                                  //   style: TextStyle(
-                                  //     color: Colors.grey.shade700,
-                                  //     fontSize: 13,
-                                  //   ),
-                                  // ),
-                                  //
-                                  // const SizedBox(width: 20),
-                                  const Icon(
-                                    Icons.currency_rupee,
-                                    size: 15,
-                                    color: Colors.grey,
-                                  ),
-
-                                  Text(
-                                    "${item["grandTotal"] ?? 0}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
+
+                        const SizedBox(height: 10),
+
+                        /// Source | Kitchen | Meal
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.inventory_2_outlined,
+                              size: 15,
+                              color: Colors.grey,
+                            ),
+
+                            const SizedBox(width: 5),
+
+                            Expanded(
+                              child: Text(
+                                "${item["poNumber"]}   •   ${item["warehouseName"]}   •   ${item["vendorName"]}",
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        /// Date
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 15,
+                              color: Colors.grey,
+                            ),
+
+                            const SizedBox(width: 5),
+
+                            Text(
+                              "${item["receivedDate"]}  -  ${item["invoiceDate"]}",
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        /// Items + Amount
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.shopping_basket_outlined,
+                              size: 15,
+                              color: Colors.grey,
+                            ),
+
+                            const SizedBox(width: 5),
+
+                            // Text(
+                            //   "${item["totalItems"] ?? 0} Items",
+                            //   style: TextStyle(
+                            //     color: Colors.grey.shade700,
+                            //     fontSize: 13,
+                            //   ),
+                            // ),
+                            //
+                            // const SizedBox(width: 20),
+                            const Icon(
+                              Icons.currency_rupee,
+                              size: 15,
+                              color: Colors.grey,
+                            ),
+
+                            Text(
+                              "${item["grandTotal"] ?? 0}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -510,7 +509,7 @@ class _PurchaseRequestDetailsPageState
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      prDetails = json["data"]["purchaseOrder"];
+      prDetails = json["data"]["GoodsReceipt"];
 
       ingredients = List<Map<String, dynamic>>.from(
         json["data"]["items"] ?? [],
@@ -686,7 +685,7 @@ class _PurchaseRequestDetailsPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("PO List"),
+        title: Text("GRN List"),
         backgroundColor: const Color(0xFF010440),
         foregroundColor: Colors.white,
       ),
@@ -1081,11 +1080,11 @@ class _PurchaseRequestDetailsPageState
       "ingredients": ingredients
           .map(
             (e) => {
-              "ingredientId": e["ingredientId"],
-              // "quantity": e["quantity"],
-              "requiredQty": e["requiredQty"],
-            },
-          )
+          "ingredientId": e["ingredientId"],
+          // "quantity": e["quantity"],
+          "requiredQty": e["requiredQty"],
+        },
+      )
           .toList(),
     };
 
@@ -1180,88 +1179,158 @@ class _PurchaseRequestDetailsPageState
 class GenerateGRNPage extends StatefulWidget {
   final int poId;
 
-  const GenerateGRNPage({super.key, required this.poId});
+  // final Map<String, dynamic> requisition;
+
+  const GenerateGRNPage({
+    super.key,
+    required this.poId,
+    // required this.requisition,
+  });
 
   @override
   State<GenerateGRNPage> createState() => _GenerateGRNPageState();
 }
 
 class _GenerateGRNPageState extends State<GenerateGRNPage> {
-  Map<String, dynamic>? po;
-
-  List<Map<String, dynamic>> poItems = [];
-
-  List<Map<String, dynamic>> warehouses = [];
-
-  int? warehouseId;
-
-  String? warehouseName;
-
-  DateTime receivedDate = DateTime.now();
-
-  final invoiceNoController = TextEditingController();
-
-  final challanController = TextEditingController();
-
-  final vehicleController = TextEditingController();
-
-  final receivedByController = TextEditingController();
-
-  final inspectedByController = TextEditingController();
-
-  final receivedDateController = TextEditingController();
-
-  final invoiceDateController = TextEditingController();
-
-  final remarksController = TextEditingController();
-
-  DateTime? invoiceDate;
+  List<Map<String, dynamic>> eligibleLines = [];
+  bool loading = true;
+  Map<String, dynamic>? requisition;
 
   @override
   void initState() {
     super.initState();
 
-    receivedDateController.text =
-        "${receivedDate.year}-${receivedDate.month.toString().padLeft(2, '0')}-${receivedDate.day.toString().padLeft(2, '0')}";
+    loadPODetails();
 
-    loadPODetails().then((_) {
-      loadWarehouses();
+    loadEligibleLines().then((_) {
+      loadVendors();
     });
   }
 
-  Future<void> pickReceivedDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: receivedDate,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2035),
-    );
+  Future<void> generatePO() async {
+    final selectedItems = eligibleLines
+        .where((e) => e["selected"] == true)
+        .toList();
 
-    if (picked != null) {
-      setState(() {
-        receivedDate = picked;
-        receivedDateController.text =
-            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      });
+    if (selectedItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Select atleast one ingredient")),
+      );
+
+      return;
     }
-  }
 
-  Future<void> pickInvoiceDate() async {
-    final DateTime initial = invoiceDate ?? DateTime.now();
+    if (selectedItems.any((e) => e["vendorId"] == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Select vendor for all selected ingredients"),
+        ),
+      );
 
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2035),
+      return;
+    }
+
+    final today = DateTime.now();
+    final requiredDate = DateTime.parse(requisition!["requiredByDate"]);
+
+    final expectedDeliveryDate = requiredDate.isBefore(today)
+        ? today
+        : requiredDate;
+
+    final body = {
+      "vendorId": selectedItems.first["vendorId"],
+
+      "kitchenId": requisition!["kitchenId"],
+
+      "companyId": 76,
+
+      "deliveryAddress": requisition!["deliveryAddress"] ?? "",
+
+      "countryCode": "IN",
+
+      "currencyCode": "INR",
+
+      "orderDate": today.toIso8601String().split("T")[0],
+
+      "expectedDeliveryDate": expectedDeliveryDate.toIso8601String().split(
+        "T",
+      )[0],
+
+      "remarks": requisition!["remarks"] ?? "",
+
+      "taxType": "EXCLUSIVE",
+
+      "taxPercentage": 0,
+
+      "shippingAmount": 0,
+
+      "otherCharges": 0,
+
+      "actionBy": requisition!["modifiedBy"],
+
+      "items": selectedItems.map((item) {
+        return {
+          "prIngredientId": item["prIngredientId"],
+
+          "ingredientId": item["ingredientId"],
+
+          "ingredientName": item["ingredientName"],
+
+          "ingredientTypeId": item["ingredientTypeId"],
+
+          "ingredientTypeName": item["ingredientTypeName"],
+
+          "uomId": item["uomId"],
+
+          "uomName": item["uomName"],
+
+          "requiredQty": item["remainingQty"],
+
+          "orderedQty": item["remainingQty"],
+
+          "unitPrice": item["estimatedUnitPrice"],
+
+          "discountPercentage": 0,
+
+          "taxType": "EXCLUSIVE",
+
+          "taxPercentage": 0,
+
+          "taxInclusive": false,
+
+          "taxSource": "NONE",
+
+          "remarks": "",
+        };
+      }).toList(),
+    };
+
+    print(jsonEncode(body));
+
+    final response = await http.post(
+      Uri.parse(
+        "${AppConfig.apiBaseUrl}/api/po/generate-from-pr/${widget.poId}",
+      ),
+
+      headers: {"Content-Type": "application/json"},
+
+      body: jsonEncode(body),
     );
 
-    if (picked != null) {
-      setState(() {
-        invoiceDate = picked;
-        invoiceDateController.text =
-            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      });
+    print(response.body);
+
+    if (response.statusCode == 201) {
+      final json = jsonDecode(response.body);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
     }
   }
 
@@ -1273,145 +1342,64 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      po = json["data"]["purchaseOrder"];
-
-      poItems = List<Map<String, dynamic>>.from(json["data"]["items"]);
-
-      for (final item in poItems) {
-        item["receivedQty"] = item["receivedQty"];
-        item["acceptedQty"] = item["expectedQty"];
-        item["orderedQty"] = item["orderedQty"];
-        item["rejectedQty"] = 0;
-        item["damagedQty"] = 0;
-        item["shortQty"] = 0;
-        item["batchNumber"] = "";
-        item["manufacturingDate"] = null;
-        item["expiryDate"] = null;
-        item["qcStatus"] = "Pending";
-        item["remarks"] = "";
-      }
-
-      setState(() {});
+      requisition = json["data"]["requisition"];
     }
   }
 
-  Future<void> loadWarehouses() async {
+  Future<void> loadEligibleLines() async {
     final response = await http.get(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/kitchenAllGet/list"),
+      Uri.parse("${AppConfig.apiBaseUrl}/api/po/eligible-lines/${widget.poId}"),
     );
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
 
-      warehouses = List<Map<String, dynamic>>.from(json["data"]);
+      eligibleLines = List<Map<String, dynamic>>.from(json["data"]);
 
-      setState(() {});
+      for (final item in eligibleLines) {
+        item["selected"] = false;
+        item["vendorId"] = null;
+      }
     }
+
+    setState(() {
+      loading = false;
+    });
   }
 
-  Future<void> createDraftGRN() async {
-    final body = {
-      "poId": widget.poId,
+  Map<int, List<dynamic>> vendors = {};
 
-      "warehouseId": warehouseId,
+  Future<void> loadVendors() async {
+    vendors.clear();
 
-      "warehouseName": warehouseName,
+    final types = eligibleLines
+        .where((e) => e["selected"])
+        .map((e) => e["ingredientTypeId"])
+        .toSet();
 
-      "receivedDate": receivedDate.toIso8601String().split("T")[0],
+    for (final typeId in types) {
+      final response = await http.get(
+        Uri.parse(
+          "${AppConfig.apiBaseUrl}/api/po/vendors-by-ingredient-type/$typeId",
+        ),
+      );
 
-      "invoiceNumber": invoiceNoController.text,
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
 
-      "invoiceDate": invoiceDate == null
-          ? null
-          : invoiceDate!.toIso8601String().split("T")[0],
+        vendors[typeId] = json["data"];
+      }
+    }
 
-      "deliveryChallanNumber": challanController.text,
-
-      "vehicleNumber": vehicleController.text,
-
-      "receivedBy": receivedByController.text,
-
-      "inspectedBy": inspectedByController.text,
-
-      "remarks": remarksController.text,
-
-      "actionBy": "Mobile",
-
-      "items": poItems.map((item) {
-        return {
-          "poItemId": item["poItemId"],
-
-          "expectedQty": item["expectedQty"],
-
-          "receivedQty": item["receivedQty"],
-
-          "acceptedQty": item["acceptedQty"],
-
-          "rejectedQty": item["rejectedQty"],
-
-          "damagedQty": item["damagedQty"],
-
-          "shortQty": item["shortQty"],
-
-          "batchNumber": item["batchNumber"],
-
-          "manufacturingDate": item["manufacturingDate"],
-
-          "expiryDate": item["expiryDate"],
-
-          "qcStatus": item["qcStatus"],
-
-          "remarks": item["remarks"],
-        };
-      }).toList(),
-    };
-
-    final response = await http.post(
-      Uri.parse("${AppConfig.apiBaseUrl}/api/grn/createDraft"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(body),
-    );
-
-    print(response.body);
-  }
-
-  Widget sectionTitle(IconData icon, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFFF15F28).withOpacity(.12),
-            child: Icon(icon, color: const Color(0xFFF15F28), size: 18),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration fieldDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
-    );
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Generate GRN"),
@@ -1427,347 +1415,81 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFF15F28),
             ),
-            onPressed: createDraftGRN,
+            onPressed: generatePO,
             child: const Text(
-              "Create GRN Draft",
+              "Generate Goods Receipt",
               style: TextStyle(color: Colors.white),
             ),
           ),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Container(
-            //   width: double.infinity,
-            //   padding: const EdgeInsets.all(18),
-            //   decoration: BoxDecoration(
-            //     color: const Color(0xFF010440),
-            //     borderRadius: BorderRadius.circular(15),
-            //   ),
-            //   child: const Row(
-            //     children: [
-            //       Icon(
-            //         Icons.inventory_2_rounded,
-            //         color: Colors.white,
-            //         size: 32,
-            //       ),
-            //       SizedBox(width: 12),
-            //       Expanded(
-            //         child: Column(
-            //           crossAxisAlignment: CrossAxisAlignment.start,
-            //           children: [
-            //             Text(
-            //               "Generate GRN",
-            //               style: TextStyle(
-            //                 color: Colors.white,
-            //                 fontSize: 20,
-            //                 fontWeight: FontWeight.bold,
-            //               ),
-            //             ),
-            //             SizedBox(height: 4),
-            //             Text(
-            //               "Fill warehouse & receipt details",
-            //               style: TextStyle(color: Colors.white70),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
+      body: ListView.builder(
+        itemCount: eligibleLines.length,
+        itemBuilder: (context, index) {
+          final item = eligibleLines[index];
 
-            sectionTitle(Icons.description_outlined, "GRN Details"),
+          return Card(
+            margin: const EdgeInsets.all(8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  CheckboxListTile(
+                    value: item["selected"],
+                    onChanged: (v) async {
+                      setState(() {
+                        item["selected"] = v ?? false;
+                      });
+                      await loadVendors();
+                    },
+                    title: Text(item["ingredientName"]),
+                    subtitle: Text(
+                      "${item["remainingQty"]} ${item["uomName"] ?? ""}",
+                    ),
+                    secondary: Text("₹${item["estimatedUnitPrice"]}"),
+                  ),
 
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    DropdownButtonFormField<int>(
-                      value: warehouseId,
-                      decoration: fieldDecoration(
-                        "Warehouse",
-                        Icons.warehouse_outlined,
-                      ),
-                      items: warehouses.map((warehouse) {
-                        return DropdownMenuItem<int>(
-                          value: warehouse["id"],
-                          child: Text(warehouse["name"]),
+                  DropdownButtonFormField<int>(
+                    value: item["vendorId"],
+                    decoration: const InputDecoration(
+                      labelText: "Select Vendor",
+                    ),
+                    items: (vendors[item["ingredientTypeId"]] ?? [])
+                        .map<DropdownMenuItem<int>>((vendor) {
+                      return DropdownMenuItem<int>(
+                        value: vendor["vendorId"],
+                        child: Text(vendor["vendorName"]),
+                      );
+                    })
+                        .toList(),
+                    onChanged: (value) {
+                      final vendor = (vendors[item["ingredientTypeId"]] ?? [])
+                          .firstWhere((v) => v["vendorId"] == value);
+
+                      if ((item["remainingQty"] as num).toDouble() <
+                          (vendor["minQty"] as num).toDouble()) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "Minimum order for ${item["ingredientName"]} is ${vendor["minQty"]}",
+                            ),
+                          ),
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          warehouseId = value;
-                          warehouseName = warehouses.firstWhere(
-                            (e) => e["id"] == value,
-                          )["name"];
-                        });
-                      },
-                    ),
 
-                    const SizedBox(height: 12),
+                        return;
+                      }
 
-                    TextFormField(
-                      controller: receivedDateController,
-                      readOnly: true,
-                      decoration: fieldDecoration(
-                        "Received Date",
-                        Icons.calendar_today,
-                      ),
-                      onTap: pickReceivedDate,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: invoiceDateController,
-                      readOnly: true,
-                      decoration: fieldDecoration(
-                        "Invoice Date",
-                        Icons.calendar_today,
-                      ),
-                      onTap: pickReceivedDate,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: invoiceNoController,
-                      decoration: fieldDecoration(
-                        "Invoice Number",
-                        Icons.receipt_long,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: challanController,
-                      decoration: fieldDecoration(
-                        "Challan Number",
-                        Icons.format_list_numbered_outlined,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: vehicleController,
-                      decoration: fieldDecoration(
-                        "Vehicle Number",
-                        Icons.local_shipping,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: receivedByController,
-                      decoration: fieldDecoration("Received By", Icons.person),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: inspectedByController,
-                      decoration: fieldDecoration(
-                        "Inspected By",
-                        Icons.person_3_sharp,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: remarksController,
-                      maxLines: 3,
-                      decoration: fieldDecoration("Remarks", Icons.notes),
-                    ),
-                  ],
-                ),
+                      setState(() {
+                        item["vendorId"] = value;
+                      });
+                    },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            sectionTitle(Icons.shopping_cart_checkout, "PO Items"),
-
-            const SizedBox(height: 10),
-
-            ...poItems.map((item) {
-              return Card(
-                elevation: 3,
-                shadowColor: Colors.grey.shade200,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFF15F28),
-                              child: Icon(Icons.inventory, color: Colors.white),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                item["ingredientName"],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Container(
-                        margin: const EdgeInsets.only(top: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          "Ordered Qty : ${item["orderedQty"]}",
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        initialValue: item["receivedQty"].toString(),
-                        decoration: fieldDecoration(
-                          "Received Qty",
-                          Icons.scale,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        initialValue: item["acceptedQty"].toString(),
-                        decoration: fieldDecoration(
-                          "Accepted Qty",
-                          Icons.check_circle_outline,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        initialValue: item["rejectedQty"].toString(),
-                        decoration: fieldDecoration(
-                          "Rejected Qty",
-                          Icons.cancel_outlined,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        initialValue: item["damagedQty"].toString(),
-                        decoration: fieldDecoration(
-                          "Damaged Qty",
-                          Icons.warning_amber,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextField(
-                        decoration: fieldDecoration(
-                          "Batch Number",
-                          Icons.qr_code,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        decoration: fieldDecoration(
-                          "Manufacturing Date",
-                          Icons.calendar_month,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextFormField(
-                        decoration: fieldDecoration(
-                          "Expiry Date",
-                          Icons.event_busy,
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      DropdownButtonFormField<String>(
-                        value: item["qcStatus"],
-                        decoration: fieldDecoration(
-                          "QC Status",
-                          Icons.verified,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: "Pending",
-                            child: Text("Pending"),
-                          ),
-                          DropdownMenuItem(
-                            value: "Passed",
-                            child: Text("Passed"),
-                          ),
-                          DropdownMenuItem(
-                            value: "Failed",
-                            child: Text("Failed"),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            item["qcStatus"] = value;
-                          });
-                        },
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      TextField(
-                        decoration: fieldDecoration("Remarks", Icons.notes),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-
-            const SizedBox(height: 80),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

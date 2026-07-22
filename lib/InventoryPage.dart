@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'GoodsReceiptPage.dart';
 import 'PurchaseOrderPage.dart';
 import 'PurchaseRequestPage.dart';
 
@@ -95,6 +95,13 @@ class InventoryPage extends StatelessWidget {
         break;
 
       case "Goods Receipt":
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                GoodsReceiptPage(companyId: companyId, username: username),
+          ),
+        );
         break;
 
       case "Purchase Invoice":

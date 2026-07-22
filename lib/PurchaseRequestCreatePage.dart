@@ -74,7 +74,7 @@ class _PurchaseRequestCreatePageState extends State<PurchaseRequestCreatePage> {
   Future<void> loadKitchens() async {
     final response = await http.get(
       Uri.parse(
-        "${AppConfig.apiBaseUrl}/api/kitchenByCompany/${widget.companyId}",
+        "${AppConfig.apiBaseUrl}/api/kitchenAllGet/list",
       ),
     );
 
