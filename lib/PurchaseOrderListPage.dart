@@ -1246,6 +1246,42 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
     }
   }
 
+  Future<void> pickManufacturingDate(Map<String, dynamic> item) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: item["manufacturingDate"] != null
+          ? DateTime.parse(item["manufacturingDate"])
+          : DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+
+    if (picked != null) {
+      setState(() {
+        item["manufacturingDate"] =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
+  Future<void> pickExpiryDate(Map<String, dynamic> item) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: item["expiryDate"] != null
+          ? DateTime.parse(item["expiryDate"])
+          : DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2050),
+    );
+
+    if (picked != null) {
+      setState(() {
+        item["expiryDate"] =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
   Future<void> pickInvoiceDate() async {
     final DateTime initial = invoiceDate ?? DateTime.now();
 
@@ -1274,6 +1310,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
       final json = jsonDecode(response.body);
 
       po = json["data"]["purchaseOrder"];
+      receivedByController.text = po?["createdBy"] ?? "";
 
       poItems = List<Map<String, dynamic>>.from(json["data"]["items"]);
 
@@ -1281,6 +1318,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
         item["receivedQty"] = item["receivedQty"];
         item["acceptedQty"] = item["expectedQty"];
         item["orderedQty"] = item["orderedQty"];
+        item["remainingQty"] = item["pendingQty"];
         item["rejectedQty"] = 0;
         item["damagedQty"] = 0;
         item["shortQty"] = 0;
@@ -1305,6 +1343,19 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
       warehouses = List<Map<String, dynamic>>.from(json["data"]);
 
+      if (po != null) {
+        warehouseId = po!["kitchenId"];
+
+        final warehouse = warehouses.firstWhere(
+          (e) => e["id"] == warehouseId,
+          orElse: () => <String, dynamic>{},
+        );
+
+        if (warehouse.isNotEmpty) {
+          warehouseName = warehouse["name"];
+        }
+      }
+
       setState(() {});
     }
   }
@@ -1313,7 +1364,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
     final body = {
       "poId": widget.poId,
 
-      "warehouseId": warehouseId,
+      "warehouseId": po?["kitchenId"],
 
       "warehouseName": warehouseName,
 
@@ -1335,7 +1386,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
       "remarks": remarksController.text,
 
-      "actionBy": "Mobile",
+      "actionBy": "Mobile PO",
 
       "items": poItems.map((item) {
         return {
@@ -1343,9 +1394,11 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
           "expectedQty": item["expectedQty"],
 
+          "acceptedQty": item["acceptedQty"],
+
           "receivedQty": item["receivedQty"],
 
-          "acceptedQty": item["acceptedQty"],
+          "remainingQty": item["remainingQty"],
 
           "rejectedQty": item["rejectedQty"],
 
@@ -1365,19 +1418,35 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
         };
       }).toList(),
     };
-
+    for (var item in poItems) {
+      print(item);
+    }
     final response = await http.post(
       Uri.parse("${AppConfig.apiBaseUrl}/api/grn/createDraft"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
 
+    print(jsonEncode(body));
     print(response.body);
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(json["status"]["message"])));
+
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.body)));
+    }
   }
 
   Widget sectionTitle(IconData icon, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           CircleAvatar(
@@ -1388,7 +1457,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
           const SizedBox(width: 10),
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -1398,14 +1467,30 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
   InputDecoration fieldDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+
+      labelStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+
+      prefixIcon: Icon(icon, size: 18, color: Colors.grey),
+
+      prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+
       filled: true,
       fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+
+      isDense: true,
+
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFF15F28), width: 1.2),
       ),
     );
   }
@@ -1437,49 +1522,10 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Container(
-            //   width: double.infinity,
-            //   padding: const EdgeInsets.all(18),
-            //   decoration: BoxDecoration(
-            //     color: const Color(0xFF010440),
-            //     borderRadius: BorderRadius.circular(15),
-            //   ),
-            //   child: const Row(
-            //     children: [
-            //       Icon(
-            //         Icons.inventory_2_rounded,
-            //         color: Colors.white,
-            //         size: 32,
-            //       ),
-            //       SizedBox(width: 12),
-            //       Expanded(
-            //         child: Column(
-            //           crossAxisAlignment: CrossAxisAlignment.start,
-            //           children: [
-            //             Text(
-            //               "Generate GRN",
-            //               style: TextStyle(
-            //                 color: Colors.white,
-            //                 fontSize: 20,
-            //                 fontWeight: FontWeight.bold,
-            //               ),
-            //             ),
-            //             SizedBox(height: 4),
-            //             Text(
-            //               "Fill warehouse & receipt details",
-            //               style: TextStyle(color: Colors.white70),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-
             sectionTitle(Icons.description_outlined, "GRN Details"),
 
             Card(
@@ -1493,6 +1539,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
                   children: [
                     DropdownButtonFormField<int>(
                       value: warehouseId,
+                      style: const TextStyle(fontSize: 13, color: Colors.black),
                       decoration: fieldDecoration(
                         "Warehouse",
                         Icons.warehouse_outlined,
@@ -1518,6 +1565,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
                     TextFormField(
                       controller: receivedDateController,
                       readOnly: true,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Received Date",
                         Icons.calendar_today,
@@ -1530,17 +1578,19 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
                     TextFormField(
                       controller: invoiceDateController,
                       readOnly: true,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Invoice Date",
                         Icons.calendar_today,
                       ),
-                      onTap: pickReceivedDate,
+                      onTap: pickInvoiceDate,
                     ),
 
                     const SizedBox(height: 12),
 
                     TextField(
                       controller: invoiceNoController,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Invoice Number",
                         Icons.receipt_long,
@@ -1551,6 +1601,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                     TextField(
                       controller: challanController,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Challan Number",
                         Icons.format_list_numbered_outlined,
@@ -1561,6 +1612,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                     TextField(
                       controller: vehicleController,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Vehicle Number",
                         Icons.local_shipping,
@@ -1571,6 +1623,8 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                     TextField(
                       controller: receivedByController,
+                      readOnly: true,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration("Received By", Icons.person),
                     ),
 
@@ -1578,6 +1632,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                     TextField(
                       controller: inspectedByController,
+                      style: const TextStyle(fontSize: 13),
                       decoration: fieldDecoration(
                         "Inspected By",
                         Icons.person_3_sharp,
@@ -1588,6 +1643,7 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                     TextField(
                       controller: remarksController,
+                      style: const TextStyle(fontSize: 13),
                       maxLines: 3,
                       decoration: fieldDecoration("Remarks", Icons.notes),
                     ),
@@ -1622,11 +1678,11 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
                         ),
                         child: Row(
                           children: [
-                            const CircleAvatar(
-                              radius: 18,
-                              backgroundColor: Color(0xFFF15F28),
-                              child: Icon(Icons.inventory, color: Colors.white),
-                            ),
+                            // const CircleAvatar(
+                            //   radius: 18,
+                            //   backgroundColor: Color(0xFFF15F28),
+                            //   child: Icon(Icons.inventory, color: Colors.white),
+                            // ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -1662,73 +1718,125 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
 
                       TextFormField(
                         initialValue: item["receivedQty"].toString(),
+                        style: const TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
                         decoration: fieldDecoration(
                           "Received Qty",
                           Icons.scale,
                         ),
+                        onChanged: (value) {
+                          item["receivedQty"] = double.tryParse(value) ?? 0;
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        initialValue: item["remainingQty"].toString(),
+                        style: const TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        decoration: fieldDecoration(
+                          "Remaining Qty",
+                          Icons.scale,
+                        ),
+                        onChanged: (value) {
+                          item["remainingQty"] = double.tryParse(value) ?? 0;
+                        },
                       ),
 
                       const SizedBox(height: 10),
 
                       TextFormField(
                         initialValue: item["acceptedQty"].toString(),
+                        keyboardType: TextInputType.number,
                         decoration: fieldDecoration(
                           "Accepted Qty",
                           Icons.check_circle_outline,
                         ),
+                        onChanged: (value) {
+                          item["acceptedQty"] = double.tryParse(value) ?? 0;
+                        },
                       ),
 
                       const SizedBox(height: 10),
 
                       TextFormField(
+                        style: const TextStyle(fontSize: 13),
                         initialValue: item["rejectedQty"].toString(),
                         decoration: fieldDecoration(
                           "Rejected Qty",
                           Icons.cancel_outlined,
                         ),
+                        onChanged: (value) {
+                          item["rejectedQty"] = double.tryParse(value) ?? 0;
+                        },
                       ),
 
                       const SizedBox(height: 10),
 
                       TextFormField(
+                        style: const TextStyle(fontSize: 13),
                         initialValue: item["damagedQty"].toString(),
                         decoration: fieldDecoration(
                           "Damaged Qty",
                           Icons.warning_amber,
                         ),
+                        onChanged: (value) {
+                          item["damagedQty"] = double.tryParse(value) ?? 0;
+                        },
                       ),
 
                       const SizedBox(height: 10),
 
                       TextField(
+                        style: const TextStyle(fontSize: 13),
                         decoration: fieldDecoration(
                           "Batch Number",
                           Icons.qr_code,
                         ),
+                        onChanged: (value) {
+                          item["batchNumber"] = value;
+                        },
                       ),
 
                       const SizedBox(height: 10),
 
                       TextFormField(
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: item["manufacturingDate"] ?? "",
+                        ),
+                        style: const TextStyle(fontSize: 13),
                         decoration: fieldDecoration(
                           "Manufacturing Date",
                           Icons.calendar_month,
                         ),
+                        onTap: () => pickManufacturingDate(item),
                       ),
 
                       const SizedBox(height: 10),
 
                       TextFormField(
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: item["expiryDate"] ?? "",
+                        ),
+                        style: const TextStyle(fontSize: 13),
                         decoration: fieldDecoration(
                           "Expiry Date",
                           Icons.event_busy,
                         ),
+                        onTap: () => pickExpiryDate(item),
                       ),
 
                       const SizedBox(height: 10),
 
                       DropdownButtonFormField<String>(
                         value: item["qcStatus"],
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black,
+                        ),
                         decoration: fieldDecoration(
                           "QC Status",
                           Icons.verified,
@@ -1757,7 +1865,11 @@ class _GenerateGRNPageState extends State<GenerateGRNPage> {
                       const SizedBox(height: 10),
 
                       TextField(
+                        style: const TextStyle(fontSize: 13),
                         decoration: fieldDecoration("Remarks", Icons.notes),
+                        onChanged: (value) {
+                          item["remarks"] = value;
+                        },
                       ),
                     ],
                   ),
